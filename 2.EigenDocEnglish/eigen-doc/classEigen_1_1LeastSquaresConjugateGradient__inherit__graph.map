@@ -1,0 +1,5 @@
+<map id="Eigen::LeastSquaresConjugateGradient&lt; MatrixType_, Preconditioner_ &gt;" name="Eigen::LeastSquaresConjugateGradient&lt; MatrixType_, Preconditioner_ &gt;">
+<area shape="rect" id="node1" title="A conjugate gradient solver for sparse (or dense) least&#45;square problems." alt="" coords="5,711,269,861"/>
+<area shape="rect" id="node2" href="$classEigen_1_1IterativeSolverBase.html" title=" " alt="" coords="24,233,251,663"/>
+<area shape="rect" id="node3" href="$classEigen_1_1SparseSolverBase.html" title="A base class for sparse solvers." alt="" coords="52,5,223,185"/>
+</map>

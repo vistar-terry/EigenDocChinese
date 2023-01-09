@@ -1,0 +1,5 @@
+<map id="Eigen::BiCGSTAB&lt; MatrixType_, Preconditioner_ &gt;" name="Eigen::BiCGSTAB&lt; MatrixType_, Preconditioner_ &gt;">
+<area shape="rect" id="node1" title="A bi conjugate gradient stabilized solver for sparse square problems." alt="" coords="5,711,211,861"/>
+<area shape="rect" id="node2" href="$classEigen_1_1IterativeSolverBase.html" title=" " alt="" coords="15,233,201,663"/>
+<area shape="rect" id="node3" href="$classEigen_1_1SparseSolverBase.html" title="A base class for sparse solvers." alt="" coords="23,5,193,185"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Eigen::SuperILU&lt; MatrixType_ &gt;" name="Eigen::SuperILU&lt; MatrixType_ &gt;">
+<area shape="rect" id="node1" title="A sparse direct incomplete LU factorization and solver based on the SuperLU library." alt="" coords="5,740,219,1037"/>
+<area shape="rect" id="node2" href="$classEigen_1_1SuperLUBase.html" title=" " alt="" coords="21,233,203,692"/>
+<area shape="rect" id="node3" href="$classEigen_1_1SparseSolverBase.html" title="A base class for sparse solvers." alt="" coords="27,5,197,185"/>
+</map>

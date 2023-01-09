@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['skyline_20module_3190',['Skyline module',['../group__Skyline__Module.html',1,'']]],
+  ['slicing_20and_20indexing_3191',['Slicing and Indexing',['../../group__TutorialSlicingIndexing.html',1,'']]],
+  ['solving_20linear_20least_20squares_20systems_3192',['Solving linear least squares systems',['../../group__LeastSquares.html',1,'']]],
+  ['solving_20sparse_20linear_20systems_3193',['Solving Sparse Linear Systems',['../../group__TopicSparseSystems.html',1,'']]],
+  ['space_20transformations_3194',['Space transformations',['../../group__TutorialGeometry.html',1,'']]],
+  ['sparse_20linear_20algebra_3195',['Sparse linear algebra',['../../group__Sparse__chapter.html',1,'']]],
+  ['sparse_20matrix_20manipulations_3196',['Sparse matrix manipulations',['../../group__TutorialSparse.html',1,'']]],
+  ['sparse_20meta_2dmodule_3197',['Sparse meta-module',['../../group__Sparse__Module.html',1,'']]],
+  ['sparsecholesky_20module_3198',['SparseCholesky module',['../../group__SparseCholesky__Module.html',1,'']]],
+  ['sparsecore_20module_3199',['SparseCore module',['../../group__SparseCore__Module.html',1,'']]],
+  ['sparseextra_20module_3200',['SparseExtra module',['../group__SparseExtra__Module.html',1,'']]],
+  ['sparselu_20module_3201',['SparseLU module',['../../group__SparseLU__Module.html',1,'']]],
+  ['sparseqr_20module_3202',['SparseQR module',['../../group__SparseQR__Module.html',1,'']]],
+  ['special_20math_20functions_20module_3203',['Special math functions module',['../group__SpecialFunctions__Module.html',1,'']]],
+  ['spline_20and_20spline_20fitting_20module_3204',['Spline and spline fitting module',['../group__Splines__Module.html',1,'']]],
+  ['stl_20iterators_20and_20algorithms_3205',['STL iterators and algorithms',['../../group__TutorialSTL.html',1,'']]],
+  ['storage_20orders_3206',['Storage orders',['../../group__TopicStorageOrders.html',1,'']]],
+  ['structures_20having_20eigen_20members_3207',['Structures Having Eigen Members',['../../group__TopicStructHavingEigenMembers.html',1,'']]],
+  ['suitesparseqr_20module_3208',['SuiteSparseQR module',['../../group__SPQRSupport__Module.html',1,'']]],
+  ['superlusupport_20module_3209',['SuperLUSupport module',['../../group__SuperLUSupport__Module.html',1,'']]],
+  ['support_20modules_3210',['Support modules',['../../group__Support__modules.html',1,'']]],
+  ['svd_20module_3211',['SVD module',['../../group__SVD__Module.html',1,'']]]
+];

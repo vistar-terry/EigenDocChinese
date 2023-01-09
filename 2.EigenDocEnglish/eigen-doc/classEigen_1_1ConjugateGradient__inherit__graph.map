@@ -1,0 +1,5 @@
+<map id="Eigen::ConjugateGradient&lt; MatrixType_, UpLo_, Preconditioner_ &gt;" name="Eigen::ConjugateGradient&lt; MatrixType_, UpLo_, Preconditioner_ &gt;">
+<area shape="rect" id="node1" title="A conjugate gradient solver for sparse (or dense) self&#45;adjoint problems." alt="" coords="5,711,267,861"/>
+<area shape="rect" id="node2" href="$classEigen_1_1IterativeSolverBase.html" title=" " alt="" coords="27,233,245,663"/>
+<area shape="rect" id="node3" href="$classEigen_1_1SparseSolverBase.html" title="A base class for sparse solvers." alt="" coords="51,5,221,185"/>
+</map>

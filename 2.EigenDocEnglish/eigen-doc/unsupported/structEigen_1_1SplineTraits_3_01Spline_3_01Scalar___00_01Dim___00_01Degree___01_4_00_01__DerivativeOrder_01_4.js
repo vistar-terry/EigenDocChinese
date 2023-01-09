@@ -1,0 +1,5 @@
+var structEigen_1_1SplineTraits_3_01Spline_3_01Scalar___00_01Dim___00_01Degree___01_4_00_01__DerivativeOrder_01_4 =
+[
+    [ "BasisDerivativeType", "structEigen_1_1SplineTraits_3_01Spline_3_01Scalar___00_01Dim___00_01Degree___01_4_00_01__DerivativeOrder_01_4.html#ab77f631a4d5e2e7c583c7e1884ba99f6", null ],
+    [ "DerivativeType", "structEigen_1_1SplineTraits_3_01Spline_3_01Scalar___00_01Dim___00_01Degree___01_4_00_01__DerivativeOrder_01_4.html#a71b3e4fa8e152ae02a6ea18622ba3f34", null ]
+];

@@ -1,0 +1,5 @@
+<map id="Eigen::GMRES&lt; MatrixType_, Preconditioner_ &gt;" name="Eigen::GMRES&lt; MatrixType_, Preconditioner_ &gt;">
+<area shape="rect" id="node1" title="A GMRES solver for sparse square problems." alt="" coords="55,520,243,700"/>
+<area shape="rect" id="node2" href="/usr/local/google/home/cantonios/dev/eigen/.builddoc/doc/Eigen.doxytags$classEigen_1_1IterativeSolverBase.html" title=" " alt="" coords="5,175,293,472"/>
+<area shape="rect" id="node3" href="/usr/local/google/home/cantonios/dev/eigen/.builddoc/doc/Eigen.doxytags$classEigen_1_1SparseSolverBase.html" title=" " alt="" coords="64,5,235,127"/>
+</map>

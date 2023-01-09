@@ -1,0 +1,4 @@
+<map id="Eigen::CholmodBase&lt; MatrixType_, UpLo_, Derived &gt;" name="Eigen::CholmodBase&lt; MatrixType_, UpLo_, Derived &gt;">
+<area shape="rect" id="node1" title="The base class for the direct Cholesky factorization of Cholmod." alt="" coords="15,233,166,648"/>
+<area shape="rect" id="node2" href="$classEigen_1_1SparseSolverBase.html" title="A base class for sparse solvers." alt="" coords="5,5,176,185"/>
+</map>

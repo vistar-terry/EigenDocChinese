@@ -1,0 +1,4 @@
+<map id="Eigen::Matrix::operator=" name="Eigen::Matrix::operator=">
+<area shape="rect" id="node1" title="Assigns matrices to each other." alt="" coords="5,13,168,39"/>
+<area shape="rect" id="node2" href="$classEigen_1_1PlainObjectBase.html#a09c4b519ee4c635144581e9fe03b6174" title="Copies the value of the expression other into *this with automatic resizing." alt="" coords="216,5,376,47"/>
+</map>

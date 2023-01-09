@@ -1,0 +1,5 @@
+<map id="Eigen::Map&lt; Quaternion&lt; Scalar_ &gt;, Options_ &gt;" name="Eigen::Map&lt; Quaternion&lt; Scalar_ &gt;, Options_ &gt;">
+<area shape="rect" id="node1" title="Expression of a quaternion from a memory buffer." alt="" coords="15,593,178,715"/>
+<area shape="rect" id="node2" href="$classEigen_1_1QuaternionBase.html" title=" " alt="" coords="5,277,188,545"/>
+<area shape="rect" id="node3" href="$classEigen_1_1RotationBase.html" title="Common base class for compact rotation representations." alt="" coords="25,5,168,229"/>
+</map>

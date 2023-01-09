@@ -1,0 +1,5 @@
+<map id="Eigen::DGMRES&lt; MatrixType_, Preconditioner_ &gt;" name="Eigen::DGMRES&lt; MatrixType_, Preconditioner_ &gt;">
+<area shape="rect" id="node1" title="A Restarted GMRES with deflation. This class implements a modification of the GMRES solver for sparse..." alt="" coords="46,520,263,993"/>
+<area shape="rect" id="node2" href="/usr/local/google/home/cantonios/dev/eigen/.builddoc/doc/Eigen.doxytags$classEigen_1_1IterativeSolverBase.html" title=" " alt="" coords="5,175,304,472"/>
+<area shape="rect" id="node3" href="/usr/local/google/home/cantonios/dev/eigen/.builddoc/doc/Eigen.doxytags$classEigen_1_1SparseSolverBase.html" title=" " alt="" coords="69,5,240,127"/>
+</map>

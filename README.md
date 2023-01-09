@@ -8,6 +8,8 @@
 
 ### 目录
 
-1.Document：中文翻译文档
+1.EigenDocChinese：中文翻译文档
 
-2.Code：文档内示例代码
+2.EigenDocEnglish：英文文档本地备份
+
+3.Code：文档内示例代码
