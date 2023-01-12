@@ -4,6 +4,8 @@
 
 项目链接：[https://github.com/vistar-terry/EigenDocChinese](https://github.com/vistar-terry/EigenDocChinese)
 
+有翻译不对的地方或其他疑问，欢迎提issues。
+
 
 
 ### 目录说明
