@@ -1,6 +1,8 @@
-英文原文链接[http://eigen.tuxfamily.org/dox/index.html](http://eigen.tuxfamily.org/dox/index.html)
+
 
 # 一、概述
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/index.html)
 
 这是Eigen3的API文档，你可以[下载](http://eigen.tuxfamily.org/dox/eigen-doc.tgz)它以便于离线阅读。
 
@@ -32,6 +34,8 @@
 
 
 # 二、入门
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/GettingStarted.html)
 
 这是一个非常简短的Eigen入门文章。该文章有两层目的。对于想要尽快开始编码的人来说，该文章是对[Eigen](http://eigen.tuxfamily.org/dox/namespaceEigen.html)库的最简单介绍。你可以把该文章作为教程的第一部分，这更加详细的解释了Eigen库。看完这个教程后可以继续阅读 [The Matrix class](http://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html)教程。
 
@@ -201,6 +205,8 @@ $$
 ## 3.1 稠密矩阵与数组操作
 
 ### 3.1.1 矩阵类
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html)
 
 在Eigen中，所有矩阵和向量都是[Matrix](http://eigen.tuxfamily.org/dox/classEigen_1_1Matrix.html)模板类的对象。向量只是行数或者列数为`1`的特殊矩阵。
 
@@ -557,6 +563,11 @@ Matrix<typename Scalar,
 - `N`可以是`2`, `3`, `4` 或`X`(意思是`Dynamic`) 中的任何一个。
 - `t`可以是`i(int)`、`f(float)`、`d(double)`、`cf(complex<float>)` 或`cd(complex<double>)` 中的任何一个。虽然这里只定义了五种类型，但并不意味只支持这五种。例如，还支持所有标准整数类型，请参阅[标量类型](https://eigen.tuxfamily.org/dox/TopicScalarTypes.html)。
 
+### 3.1.2 矩阵与向量运算
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialMatrixArithmetic.html)
+
+本文章旨在提供有关如何使用 [Eigen](http://eigen.tuxfamily.org/dox/namespaceEigen.html) 在矩阵、向量和标量之间执行算术操作的概述和一些详细信息。
 
 
 
@@ -566,10 +577,9 @@ Matrix<typename Scalar,
 
 
 
+### 3.1.3 数组类与元素操作
 
-
-
-
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialArrayClass.html)
 
 
 
