@@ -565,11 +565,122 @@ Matrix<typename Scalar,
 
 ### 3.1.2 矩阵与向量运算
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialMatrixArithmetic.html)
+[英文原文(Matrix and vector arithmetic)](http://eigen.tuxfamily.org/dox/group__TutorialMatrixArithmetic.html)
 
 本文章旨在提供有关如何使用 [Eigen](http://eigen.tuxfamily.org/dox/namespaceEigen.html) 在矩阵、向量和标量之间执行算术操作的概述和一些详细信息。
 
+#### 介绍
 
+[Eigen](http://eigen.tuxfamily.org/dox/namespaceEigen.html) 通过重载常见的 C++ 算术运算符（如 `+`、`-`、`*`）或通过特殊方法（如 `dot()`、`cross()` 等）提供矩阵/向量算术运算。对于 [Matrix](http://eigen.tuxfamily.org/dox/classEigen_1_1Matrix.html) 类（矩阵和向量），重载运算符仅支持线性代数运算。例如，`matrix1 * matrix2` 代表矩阵乘法，`vector + scalar` 向量与标量的加法是不合法的。如果想执行各种数组运算，而不是线性代数，请参阅 [数组类与元素操作](http://eigen.tuxfamily.org/dox/group__TutorialArrayClass.html)。
+
+#### 加法与减法
+
+操作符左右两侧的矩阵必须有相同的行数和列数，且它们的元素必须是同种类型，因为Eigen不支持自动类型转换。目前支持的运算符示例如下：
+
+|            | 运算符 | 示例 |
+| :--------: | :----: | :--: |
+| 二元运算符 |   +    | a+b  |
+| 二元运算符 |   -    | a-b  |
+| 一元运算符 |   -    |  -a  |
+| 复合运算符 |   +=   | a+=b |
+| 复合运算符 |   -=   | a-=b |
+
+代码示例：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+  Eigen::Matrix2d a;
+  a << 1, 2,
+       3, 4;
+  Eigen::MatrixXd b(2,2);
+  b << 2, 3,
+       1, 4;
+  std::cout << "a + b =\n" << a + b << std::endl;
+  std::cout << "a - b =\n" << a - b << std::endl;
+  std::cout << "Doing a += b;" << std::endl;
+  a += b;
+  std::cout << "Now a =\n" << a << std::endl;
+  Eigen::Vector3d v(1,2,3);
+  Eigen::Vector3d w(1,0,0);
+  std::cout << "-v + w - v =\n" << -v + w - v << std::endl;
+}
+```
+
+输出：
+
+```c++
+a + b =
+3 5
+4 8
+a - b =
+-1 -1
+ 2  0
+Doing a += b;
+Now a =
+3 5
+4 8
+-v + w - v =
+-1
+-4
+-6
+```
+
+#### 标量的标量乘法与除法
+
+标量的乘法和除法也非常简单。目前支持的运算符示例如下：
+
+|            | 运算符 |                示例                |
+| :--------: | :----: | :--------------------------------: |
+| 二元运算符 |   *    |  matrix * scalar<br>(矩阵 * 标量)  |
+| 二元运算符 |   *    |  scalar * matrix<br>(标量 * 矩阵)  |
+| 二元运算符 |   /    |  matrix / scalar<br>(矩阵 / 标量)  |
+| 复合运算符 |   *=   | matrix *= scalar<br>(矩阵 *= 标量) |
+| 复合运算符 |   /=   | matrix /= scalar<br>(矩阵 /= 标量) |
+
+代码示例：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+  Eigen::Matrix2d a;
+  a << 1, 2,
+       3, 4;
+  Eigen::Vector3d v(1,2,3);
+  std::cout << "a * 2.5 =\n" << a * 2.5 << std::endl;
+  std::cout << "0.1 * v =\n" << 0.1 * v << std::endl;
+  std::cout << "Doing v *= 2;" << std::endl;
+  v *= 2;
+  std::cout << "Now v =\n" << v << std::endl;
+}
+```
+
+输出：
+
+```
+a * 2.5 =
+2.5   5
+7.5  10
+0.1 * v =
+0.1
+0.2
+0.3
+Doing v *= 2;
+Now v =
+2
+4
+6
+```
+
+#### 表达式模板
+
+这是一个比较高级的话题，但现在提出是比较有用的。在Eigen中，诸如`+`之类的算术运算符，他们自己不执行任何操作，只是返回一个表达式对象，该对象描述了将要执行的计算。实际的计算发生在后面整个表达式被求值的时侯，比如使用`=`运算符时。虽然这听起来很繁琐，但任何现代优化编译器都能够优化掉这种抽象，从而得到完美优化的代码。例如，当你这样做时：
 
 
 
