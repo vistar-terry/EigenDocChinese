@@ -680,9 +680,106 @@ Now v =
 
 #### 表达式模板
 
-这是一个比较高级的话题，但现在提出是比较有用的。在Eigen中，诸如`+`之类的算术运算符，他们自己不执行任何操作，只是返回一个表达式对象，该对象描述了将要执行的计算。实际的计算发生在后面整个表达式被求值的时侯，比如使用`=`运算符时。虽然这听起来很繁琐，但任何现代优化编译器都能够优化掉这种抽象，从而得到完美优化的代码。例如，当你这样做时：
+这是一个比较高级的话题，但在这里提出是比较有用的。在Eigen中，诸如`+`之类的算术运算符，他们自己不执行任何操作，只是返回一个表达式对象，该对象描述了将要执行的计算操作。实际的计算发生在后面整个表达式被求值的时侯，比如使用`=`运算符时。虽然这听起来很繁琐，但任何现代优化编译器都能优化掉这种抽象，从而得到完美优化代码。例如：
+
+```c++
+VectorXf a(50), b(50), c(50), d(50);
+...
+a = 3*b + 4*c + 5*d;
+```
+
+Eigen会把上述表达式编译成一个循环，这个数组只遍历一次。数组循环如下所示：
+
+```C++
+for(int i = 0; i < 50; ++i)
+  a[i] = 3*b[i] + 4*c[i] + 5*d[i];
+```
+
+因此，你不要害怕使用相对较大的运算表达式，这只会给Eigen更多机会进行优化。
+
+#### 转置与共轭
+
+矩阵或向量 $a$ 的转置($a^T$)、共轭($\overline{a}$)和伴随($a^*$ ，如共轭转置)可以分别通过函数`transpose()`、 `conjugate()`、`adjoint()`求得。
+
+示例如下：
+
+```c++
+MatrixXcf a = MatrixXcf::Random(2,2);
+cout << "Here is the matrix a\n" << a << endl;
+
+cout << "Here is the matrix a^T\n" << a.transpose() << endl;
+ 
+cout << "Here is the conjugate of a\n" << a.conjugate() << endl;
+ 
+cout << "Here is the matrix a^*\n" << a.adjoint() << endl;
+```
+
+输出如下：
+
+```c++
+Here is the matrix a
+ (-0.211,0.68) (-0.605,0.823)
+ (0.597,0.566)  (0.536,-0.33)
+Here is the matrix a^T
+ (-0.211,0.68)  (0.597,0.566)
+(-0.605,0.823)  (0.536,-0.33)
+Here is the conjugate of a
+ (-0.211,-0.68) (-0.605,-0.823)
+ (0.597,-0.566)    (0.536,0.33)
+Here is the matrix a^*
+ (-0.211,-0.68)  (0.597,-0.566)
+(-0.605,-0.823)    (0.536,0.33)
+```
+
+对于实数矩阵，共轭函数`conjugate()`是空操作，所以共轭转置函数`adjoint()`相当于转置`transpose()`。
 
 
+
+？？？？？？？？？？？？
+
+
+
+作为基本的操作运算，`transpose()`和`adjoint()`函数只返回一个代理对象而没有做任何操作。如果执行`b = a.transpose()`，真正的转置计算是在写入`b`的时候发生的。然而，这有一个复杂的问题，如果执行`a = a.transpose()`，Eigen在转置计算完全完成之前就开始写入a，因此，所以指令`a = a.transpose()`不会改变a的任何元素。
+
+```c++
+Matrix2i a; a << 1, 2, 3, 4;
+cout << "Here is the matrix a:\n" << a << endl;
+ 
+a = a.transpose(); // !!! do NOT do this !!!
+cout << "and the result of the aliasing effect:\n" << a << endl;
+
+OUTPUT:
+Here is the matrix a:
+1 2
+3 4
+and the result of the aliasing effect:
+1 2
+2 4
+```
+
+上述的问题就是所谓的混淆问题，在`debug`模式下，当`assertion`打开，这个问题可以自动检测到。（g++编译默认是debug模式，关闭需要使用`-DNDEBUG`选项）。
+
+解决上述问题的方式可以使用transposeInPlace()函数：
+
+```c++
+MatrixXf a(2,3); a << 1, 2, 3, 4, 5, 6;
+cout << "Here is the initial matrix a:\n" << a << endl;
+ 
+ 
+a.transposeInPlace();
+cout << "and after being transposed:\n" << a << endl;
+
+Output:
+Here is the initial matrix a:
+1 2 3
+4 5 6
+and after being transposed:
+1 4
+2 5
+3 6
+```
+
+同样，对于复数的共轭也有adjointInPlace()函数。
 
 
 
