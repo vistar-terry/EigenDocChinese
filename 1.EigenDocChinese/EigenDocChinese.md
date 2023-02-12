@@ -733,13 +733,9 @@ Here is the matrix a^*
 
 对于实数矩阵，共轭函数`conjugate()`是空操作，所以共轭转置函数`adjoint()`相当于转置`transpose()`。
 
+作为基本的操作运算，`transpose()`和`adjoint()`函数只返回一个代理对象而没有做任何操作。如果执行`b = a.transpose()`，真正的转置计算是在写入`b`的时候发生的。然而，这有一个复杂的问题，如果执行`a = a.transpose()`，Eigen在转置计算完全完成之前就开始写入a，所以指令`a = a.transpose()`不会得到预期的结果。
 
-
-？？？？？？？？？？？？
-
-
-
-作为基本的操作运算，`transpose()`和`adjoint()`函数只返回一个代理对象而没有做任何操作。如果执行`b = a.transpose()`，真正的转置计算是在写入`b`的时候发生的。然而，这有一个复杂的问题，如果执行`a = a.transpose()`，Eigen在转置计算完全完成之前就开始写入a，因此，所以指令`a = a.transpose()`不会改变a的任何元素。
+示例如下：
 
 ```c++
 Matrix2i a; a << 1, 2, 3, 4;
@@ -747,8 +743,11 @@ cout << "Here is the matrix a:\n" << a << endl;
  
 a = a.transpose(); // !!! do NOT do this !!!
 cout << "and the result of the aliasing effect:\n" << a << endl;
+```
 
-OUTPUT:
+输出为：
+
+```c++
 Here is the matrix a:
 1 2
 3 4
@@ -759,17 +758,21 @@ and the result of the aliasing effect:
 
 上述的问题就是所谓的混淆问题，在`debug`模式下，当`assertion`打开，这个问题可以自动检测到。（g++编译默认是debug模式，关闭需要使用`-DNDEBUG`选项）。
 
-解决上述问题的方式可以使用transposeInPlace()函数：
+对于就地转置，可以使用`transposeInPlace()`函数：
+
+示例如下：
 
 ```c++
 MatrixXf a(2,3); a << 1, 2, 3, 4, 5, 6;
 cout << "Here is the initial matrix a:\n" << a << endl;
- 
- 
+
 a.transposeInPlace();
 cout << "and after being transposed:\n" << a << endl;
+```
 
-Output:
+输出为：
+
+```c++
 Here is the initial matrix a:
 1 2 3
 4 5 6
@@ -779,7 +782,115 @@ and after being transposed:
 3 6
 ```
 
-同样，对于复数的共轭也有adjointInPlace()函数。
+同样，对于复杂矩阵的就地共轭也有`adjointInPlace()`函数。
+
+#### (矩阵与矩阵)和(矩阵与向量)的乘积
+
+矩阵与矩阵间的乘积是通过运算符`*`来完成的。由于向量是特殊的矩阵，所以向量和矩阵的乘积实际上只是矩阵与矩阵乘积的特例，向量与向量的外积也是如此。所有的情况都会被处理成两类：
+
+|            | 运算符 |      示例       |
+| :--------: | :----: | :-------------: |
+| 二元运算符 |   *    |      a * b      |
+| 混合运算符 |   \*=   | a*=b<br>(即a=a\*b) |
+
+示例如下：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+  Eigen::Matrix2d mat;
+  mat << 1, 2,
+         3, 4;
+  Eigen::Vector2d u(-1,1), v(2,0);
+  std::cout << "Here is mat*mat:\n" << mat*mat << std::endl;
+  std::cout << "Here is mat*u:\n" << mat*u << std::endl;
+  std::cout << "Here is u^T*mat:\n" << u.transpose()*mat << std::endl;
+  std::cout << "Here is u^T*v:\n" << u.transpose()*v << std::endl;
+  std::cout << "Here is u*v^T:\n" << u*v.transpose() << std::endl;
+  std::cout << "Let's multiply mat by itself" << std::endl;
+  mat = mat*mat;
+  std::cout << "Now mat is mat:\n" << mat << std::endl;
+}
+```
+
+输出为：
+
+```
+Here is mat*mat:
+ 7 10
+15 22
+Here is mat*u:
+1
+1
+Here is u^T*mat:
+2 2
+Here is u^T*v:
+-2
+Here is u*v^T:
+-2 -0
+ 2  0
+Let's multiply mat by itself
+Now mat is mat:
+ 7 10
+15 22
+```
+
+注意：如果你阅读过上面的关于表达式模板的段落并且担心 `m = m * m` 会引发混淆问题，这里请放心，Eigen把矩阵乘法作为一个特殊的例子，并在此引入了一个临时变量，所以它会编译为：
+
+```c++
+tmp = m*m;
+m = tmp;
+```
+
+如果你知道你的矩阵乘法可以安全的计算并且没有混淆问题，那么你可以使用`noalias()`函数来避免编译临时变量，例如：
+
+```C++
+c.noalias() += a * b;
+```
+
+更多细节请参考 [aliasing](http://eigen.tuxfamily.org/dox/group__TopicAliasing.html)
+
+注意：对于担心性能的 BLAS 用户，表达式如：`c.noalias() -= 2 * a.adjoint() * b;`可以完全的优化并触发一个类似矩阵乘法的函数调用。
+
+#### 点积和叉积
+
+对于点积和叉积，需要使用 [dot()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#adfd32bf5fcf6ee603c924dde9bf7bc39) 和 [cross() ](http://eigen.tuxfamily.org/dox/group__Geometry__Module.html#ga0024b44eca99cb7135887c2aaf319d28)方法。当然，点积也可以像 `u.adjoint()*v` 一样得到一个1x1的矩阵。
+
+示例如下：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+  Eigen::Vector3d v(1,2,3);
+  Eigen::Vector3d w(0,1,2);
+ 
+  std::cout << "Dot product: " << v.dot(w) << std::endl;
+  double dp = v.adjoint()*w; // automatic conversion of the inner product to a scalar
+  std::cout << "Dot product via a matrix product: " << dp << std::endl;
+  std::cout << "Cross product:\n" << v.cross(w) << std::endl;
+}
+```
+
+输出为：
+
+```
+Dot product: 8
+Dot product via a matrix product: 8
+Cross product:
+ 1
+-2
+ 1
+```
+
+注意，叉积仅适用于大小为 `3` 的向量。点积适用于任何大小的向量。使用复数时，Eigen的点积在第一个变量中是共轭线性的，在第二个变量中是线性的。
+
+
 
 
 
