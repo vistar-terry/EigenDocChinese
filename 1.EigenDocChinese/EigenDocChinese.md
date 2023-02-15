@@ -892,6 +892,96 @@ Cross product:
 
 
 
+#### 基本算术的简化运算
+
+Eigen还提供了一些简单操作来将给定的矩阵或向量计算为标量，例如求和（[sum()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#addd7080d5c202795820e361768d0140c)）、乘积 ( [prod()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#af119d9a4efe5a15cd83c1ccdf01b3a4f) ) 、最大值 ( [maxCoeff()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a7e6987d106f1cca3ac6ab36d288cc8e1) ) 和最小值 ( [minCoeff()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a0739f9c868c331031c7810e21838dcb2) ) 。
+
+示例如下：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+using namespace std;
+int main()
+{
+  Eigen::Matrix2d mat;
+  mat << 1, 2,
+         3, 4;
+  cout << "Here is mat.sum():       " << mat.sum()       << endl;
+  cout << "Here is mat.prod():      " << mat.prod()      << endl;
+  cout << "Here is mat.mean():      " << mat.mean()      << endl;
+  cout << "Here is mat.minCoeff():  " << mat.minCoeff()  << endl;
+  cout << "Here is mat.maxCoeff():  " << mat.maxCoeff()  << endl;
+  cout << "Here is mat.trace():     " << mat.trace()     << endl;
+}
+```
+
+输出为：
+
+```c++
+Here is mat.sum():       10
+Here is mat.prod():      24
+Here is mat.mean():      2.5
+Here is mat.minCoeff():  1
+Here is mat.maxCoeff():  4
+Here is mat.trace():     5
+```
+
+矩阵的迹（对角线系数的总和）可以通过函数[trace()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#a544b609f65eb2bd3e368b3fc2d79479e)计算，也可以使用更高效的方法`a.diagonal().sum()`。
+
+也存在`minCoeff`和`maxCoeff`函数的变体，通过参数返回相应系数的坐标：
+
+```c++
+  Matrix3f m = Matrix3f::Random();
+  std::ptrdiff_t i, j;
+  float minOfM = m.minCoeff(&i,&j);
+  cout << "Here is the matrix m:\n" << m << endl;
+  cout << "Its minimum coefficient (" << minOfM 
+       << ") is at position (" << i << "," << j << ")\n\n";
+ 
+  RowVector4i v = RowVector4i::Random();
+  int maxOfV = v.maxCoeff(&i);
+  cout << "Here is the vector v: " << v << endl;
+  cout << "Its maximum coefficient (" << maxOfV 
+       << ") is at position " << i << endl;
+```
+
+输出为：
+
+```c++ 
+Here is the matrix m:
+  0.68  0.597  -0.33
+-0.211  0.823  0.536
+ 0.566 -0.605 -0.444
+Its minimum coefficient (-0.605) is at position (2,1)
+
+Here is the vector v:  1  0  3 -3
+Its maximum coefficient (3) is at position 2
+```
+
+
+
+#### 操作的有效性
+
+Eigen会检查操作的有效性，如果有错误，它会在编译的时候产生错误提示。这些错误提示可能又长又难看，但Eigen会把重要的信息写成大写，以使其更加显眼，例如：
+
+```c++
+Matrix3f m;
+Vector4f v;
+v = m*v;      // Compile-time error: YOU_MIXED_MATRICES_OF_DIFFERENT_SIZES
+```
+
+当然，在很多情况下，如检查动态矩阵的大小时，无法在编译时进行检查，Eigen会使用运行时的断言。这意味如果程序在debug模式下运行，遇到非法操作时会终止运行并打印出错误信息。如果关闭断言，程序可能会崩溃。
+
+```c++
+MatrixXf m(3,3);
+VectorXf v(4);
+v = m * v; // Run-time assertion failure here: "invalid matrix product"
+```
+
+
+
 
 
 
