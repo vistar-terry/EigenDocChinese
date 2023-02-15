@@ -982,13 +982,131 @@ v = m * v; // Run-time assertion failure here: "invalid matrix product"
 
 
 
-
-
-
-
 ### 3.1.3 数组类与元素操作
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialArrayClass.html)
+
+本页旨在提供有关如何使用[Eigen](http://eigen.tuxfamily.org/dox/namespaceEigen.html)的[Array](http://eigen.tuxfamily.org/dox/classEigen_1_1Array.html)类的概述和说明。
+
+#### 什么是数组类？
+
+与`Matrix`类用于线性代数计算不同的是，`Array`类提供了通用目的数组。此外，[Array](http://eigen.tuxfamily.org/dox/classEigen_1_1Array.html)类提供了一种执行按系数运算的简单方法，这可能没有线性代数意义，例如对每一个元素都加一个常数或按系数将两个数组相乘。
+
+#### 数组类型
+
+`Array`是一个类模板，采用与`Matrix`相同的模板参数。与`Matrix`一样，前三个模板参数是必需的：
+
+```c++
+Array<typename Scalar, int RowsAtCompileTime, int ColsAtCompileTime>
+```
+
+最后三个模板参数是可选的。由于这与`Matrix`完全相同，因此不再在此解释，仅参考[Matrix 类](http://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html)。
+
+Eigen还提供了一些常见的类型定义，其方式类似于`Matrix`类型定义，但有一些细微差别，因为`Array`一词用于一维和二维数组。使用`ArrayNt`代表一维N个大小的标量，其中 N 和 t 是大小和标量类型，详见[矩阵与向量运算](# 3.1.2 矩阵与向量运算)。对于二维数组类型，使用 `ArrayNNt `表示。示例如下：
+
+|             类型              | 类型定义 |
+| :---------------------------: | :------: |
+|    Array<float,Dynamic,1>     | ArrayXf  |
+|       Array<float,3,1>        | Array3f  |
+| Array<double,Dynamic,Dynamic> | ArrayXXd |
+|       Array<double,3,3>       | Array33d |
+
+
+
+#### 访问数组中的值
+
+就像矩阵一样，使用括号运算符可以访问数组中的值。另外，`<<`运算符可用于初始化数组（使用逗号初始化）或打印它们。
+
+例如：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+int main()
+{
+  Eigen::ArrayXXf  m(2,2);
+  
+  // assign some values coefficient by coefficient
+  m(0,0) = 1.0; m(0,1) = 2.0;
+  m(1,0) = 3.0; m(1,1) = m(0,1) + m(1,0);
+  
+  // print values to standard output
+  std::cout << m << std::endl << std::endl;
+ 
+  // using the comma-initializer is also allowed
+  m << 1.0,2.0,
+       3.0,4.0;
+     
+  // print values to standard output
+  std::cout << m << std::endl;
+}
+```
+
+输出如下：
+
+```c++
+1 2
+3 5
+
+1 2
+3 4
+```
+
+有关逗号初始化的更多信息，请参阅[高级初始化](http://eigen.tuxfamily.org/dox/group__TutorialAdvancedInitialization.html)。
+
+
+
+#### 加法与减法
+
+两个数组的加减法与矩阵相同。如果两个数组的大小相同，并且加法或减法是按系数进行的，则该操作有效。
+
+`Array` 还支持 `array + scalar` 的表达形式，这实现了对数组的每个系数都加一个常数。并且这是在`Matrix`类中不能直接使用的功能。
+
+示例如下：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+int main()
+{
+  Eigen::ArrayXXf a(3,3);
+  Eigen::ArrayXXf b(3,3);
+  a << 1,2,3,
+       4,5,6,
+       7,8,9;
+  b << 1,2,3,
+       1,2,3,
+       1,2,3;
+       
+  // Adding two arrays
+  std::cout << "a + b = " << std::endl << a + b << std::endl << std::endl;
+ 
+  // Subtracting a scalar from an array
+  std::cout << "a - 2 = " << std::endl << a - 2 << std::endl;
+}
+```
+
+输出如下：
+
+```c++
+a + b = 
+ 2  4  6
+ 5  7  9
+ 8 10 12
+
+a - 2 = 
+-1  0  1
+ 2  3  4
+ 5  6  7
+```
+
+
+
+#### 数组乘法
+
+
 
 
 
