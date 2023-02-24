@@ -1106,17 +1106,209 @@ a - 2 =
 
 #### 数组乘法
 
+当然你可以将一个数组乘以一个标量，这与矩阵相同。数组与矩阵不同的地方在于自身相乘，矩阵将乘法解释为矩阵乘积，而数组将乘法解释为系数乘积。因此，两个数组相乘时它们必须具有相同的维度。
+
+示例如下：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+int main()
+{
+  Eigen::ArrayXXf a(2,2);
+  Eigen::ArrayXXf b(2,2);
+  a << 1,2,
+       3,4;
+  b << 5,6,
+       7,8;
+  std::cout << "a * b = " << std::endl << a * b << std::endl;
+}
+```
+
+输出如下：
+
+```c++
+a * b = 
+ 5 12
+21 32
+```
 
 
 
+#### 其他按元素操作的运算
+
+除了上述的加法、减法和乘法运算符之外，`Array` 类还定义了其他按系数计算的运算。例如，`abs()` 方法对每个元素取绝对值，而`sqrt()`计算每个系数的平方根。如果你有两个相同大小的数组，你可以调用`min(.)`来构造一个数组，其元素是两个给定数组对应元素的最小值。这些操作在以下示例中进行了说明：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+int main()
+{
+  Eigen::ArrayXf a = Eigen::ArrayXf::Random(5);
+  a *= 2;
+  std::cout << "a =" << std::endl
+            << a << std::endl;
+  std::cout << "a.abs() =" << std::endl
+            << a.abs() << std::endl;
+  std::cout << "a.abs().sqrt() =" << std::endl
+            << a.abs().sqrt() << std::endl;
+  std::cout << "a.min(a.abs().sqrt()) =" << std::endl
+            << a.min(a.abs().sqrt()) << std::endl;
+}
+```
+
+输出如下：
+
+```c++
+a =
+  1.36
+-0.422
+  1.13
+  1.19
+  1.65
+a.abs() =
+ 1.36
+0.422
+ 1.13
+ 1.19
+ 1.65
+a.abs().sqrt() =
+1.17
+0.65
+1.06
+1.09
+1.28
+a.min(a.abs().sqrt()) =
+  1.17
+-0.422
+  1.06
+  1.09
+  1.28
+```
 
 
 
+#### array和matrix表达式之间的转换
+
+什么时候应该使用`Matrix` 类的对象，什么时候应该使用 `Array` 类的对象呢？
+
+首先， `Matrix` 类和`Array`类的方法不通用。如果需要进行线性代数运算，例如矩阵乘法，那么应该使用 `Matrix` 类；如果需要做元素运算，那么应该使用`Array`类。然而，有时并没有那么简单，而是需要同时使用`Matrix` 类和`Array`类。这种情况下，需要将`Matrix` 转换为`Array`或相反。这样就可以使用所有操作，而不管对象声明为`Matrix` 还是`Array`。
+
+`Matrix` 类有一个 [.array()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#a354c33eec32ceb4193d002f4d41c0497) 方法可以将`Matrix` 转换为`Array`。同样，`Array`有一个 [.matrix()](http://eigen.tuxfamily.org/dox/classEigen_1_1ArrayBase.html#af01e9ea8087e390af8af453bbe4c276c) 方法。由于Eigen表达式的抽象，这些转换发生在编译的时候，所以不需要任何运行时间成本。`.array()`和`.matrix()`既可以作为左值，也可以作为右值。
+
+Eigen 禁止在表达式中混合使用`Matrix` 和`Array`。例如，不能将`Matrix` 和`Array`直接相加；运算符的操作对象要么都是`Matrix`，要么都是`Array`，但转换后是可以的。此规则的例外是赋值运算符，允许将`Matrix` 赋值给`Array`，或将将 `Array` 赋值给`Matrix`。
+
+以下示例展示了如何通过使用`.array()`方法对 `Matrix` 对象使用`Array`的方法。例如，语句 `result = m.array() * n.array()` 将两个矩阵`m`和`n`都转换为数组，并使它们按系数相乘，再将结果分配给矩阵变量（这是合法的，因为Eigen允许将数组表达式赋值给矩阵变量）。
+
+事实上，这种用例非常普遍，以至于Eigen为矩阵提供了一个 [const .cwiseProduct(.)](http://eigen.tuxfamily.org/dox/group__TutorialArrayClass.html) 方法来满足按元素相乘的需求。
+
+示例如下：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+using Eigen::MatrixXf;
+ 
+int main()
+{
+  MatrixXf m(2,2);
+  MatrixXf n(2,2);
+  MatrixXf result(2,2);
+ 
+  m << 1,2,
+       3,4;
+  n << 5,6,
+       7,8;
+ 
+  result = m * n;
+  std::cout << "-- Matrix m*n: --\n" << result << "\n\n";
+  result = m.array() * n.array();
+  std::cout << "-- Array m*n: --\n" << result << "\n\n";
+  result = m.cwiseProduct(n);
+  std::cout << "-- With cwiseProduct: --\n" << result << "\n\n";
+  result = m.array() + 4;
+  std::cout << "-- Array m + 4: --\n" << result << "\n\n";
+}
+```
+
+输出如下：
+
+```c++
+-- Matrix m*n: --
+19 22
+43 50
+
+-- Array m*n: --
+ 5 12
+21 32
+
+-- With cwiseProduct: --
+ 5 12
+21 32
+
+-- Array m + 4: --
+5 6
+7 8
+```
 
 
 
+同样，如果`array1`和`array2`是数组，则表达式`array1.matrix() * array2.matrix()`可以计算他们的矩阵乘积。
+
+接下来是一个更复杂一点的示例，表达式`(m.array() + 4).matrix() * m`对每一个元素都加`4`，然后计算表达式结果与矩阵`m`的矩阵乘积。类似的，表达式`(m.array() * n.array()).matrix() * m`按元素计算矩阵`m`和`n`的乘积，然后计算其结果与`m`的矩阵乘法。
+
+示例如下：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+using Eigen::MatrixXf;
+ 
+int main()
+{
+  MatrixXf m(2,2);
+  MatrixXf n(2,2);
+  MatrixXf result(2,2);
+ 
+  m << 1,2,
+       3,4;
+  n << 5,6,
+       7,8;
+  
+  result = (m.array() + 4).matrix() * m;
+  std::cout << "-- Combination 1: --\n" << result << "\n\n";
+  result = (m.array() * n.array()).matrix() * m;
+  std::cout << "-- Combination 2: --\n" << result << "\n\n";
+}
+```
+
+输出如下：
+
+```
+-- Combination 1: --
+23 34
+31 46
+
+-- Combination 2: --
+ 41  58
+117 170
+```
 
 
+
+### 3.3.4 块操作
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialBlockOperations.html)
+
+本文介绍了块操作。块是`matrix`或`array`的部分矩形元素。块表达式既可以用作右值也可以用作左值。与Eigen表达式一样，如果让编译器进行优化，则块操作的运行时成本为零。
+
+
+
+#### 使用块操作
 
 
 
