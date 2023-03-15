@@ -1300,17 +1300,348 @@ int main()
 
 
 
-### 3.3.4 块操作
+### 3.1.4 块操作
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialBlockOperations.html)
 
-本文介绍了块操作。块是`matrix`或`array`的部分矩形元素。块表达式既可以用作右值也可以用作左值。与Eigen表达式一样，如果让编译器进行优化，则块操作的运行时成本为零。
+本文介绍了块操作。块是`matrix`或`array`的部分矩形元素。块表达式既可以用作右值也可以用作左值。与Eigen表达式一样，如果让编译器进行优化，则块操作的运行时间成本为零。
 
 
 
 #### 使用块操作
 
+在Eigen中最常见的块操作是`.block()` ，这有两个版本，语法如下：
 
+|块操作| 构建一个动态大小的块表达式         | 构建一个固定大小的块表达式 |
+| :--------------------------------- | :------------------------- | : |
+| 大小为 `(p,q)`, 起始于 `(i,j)`的块 | matrix.block(i,j,p,q);     | matrix.block<p,q>(i,j); |
+
+Eigen的索引是以0开始的。
+
+这两个版本都可以用在固定大小和动态大小的`matrices`和`array`上。两种表达式在语义上是一致的，唯一的区别是，固定大小的版本会在块比较小的时候快一点，但要求块大小在编译的时候就知道。
+
+以下程序使用动态大小和固定大小版本打印matrix中的几个块：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+using namespace std;
+ 
+int main()
+{
+  Eigen::MatrixXf m(4,4);
+  m <<  1, 2, 3, 4,
+        5, 6, 7, 8,
+        9,10,11,12,
+       13,14,15,16;
+  cout << "Block in the middle" << endl;
+  cout << m.block<2,2>(1,1) << endl << endl;
+  for (int i = 1; i <= 3; ++i)
+  {
+    cout << "Block of size " << i << "x" << i << endl;
+    cout << m.block(0,0,i,i) << endl << endl;
+  }
+}
+```
+
+输出如下：
+
+```
+Block in the middle
+ 6  7
+10 11
+
+Block of size 1x1
+1
+
+Block of size 2x2
+1 2
+5 6
+
+Block of size 3x3
+ 1  2  3
+ 5  6  7
+ 9 10 11
+```
+
+在上述的例子中`.block()`函数被用作右值，即它只被读取。但块也可以用作*左值*，这意味着可以给块赋值。
+
+以下示例中进行了说明。此示例还演示了数组中的块，其工作方式与上面演示的矩阵中的块完全相同。
+
+ ```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+int main()
+{
+  Eigen::Array22f m;
+  m << 1,2,
+       3,4;
+  Eigen::Array44f a = Eigen::Array44f::Constant(0.6);
+  std::cout << "Here is the array a:\n" << a << "\n\n";
+  a.block<2,2>(1,1) = m;
+  std::cout << "Here is now a with m copied into its central 2x2 block:\n" << a << "\n\n";
+  a.block(0,0,2,3) = a.block(2,1,2,3);
+  std::cout << "Here is now a with bottom-right 2x3 block copied into top-left 2x3 block:\n" << a << "\n\n";
+}
+ ```
+
+输出如下：
+
+```c++
+Here is the array a:
+0.6 0.6 0.6 0.6
+0.6 0.6 0.6 0.6
+0.6 0.6 0.6 0.6
+0.6 0.6 0.6 0.6
+
+Here is now a with m copied into its central 2x2 block:
+0.6 0.6 0.6 0.6
+0.6   1   2 0.6
+0.6   3   4 0.6
+0.6 0.6 0.6 0.6
+
+Here is now a with bottom-right 2x3 block copied into top-left 2x3 block:
+  3   4 0.6 0.6
+0.6 0.6 0.6 0.6
+0.6   3   4 0.6
+0.6 0.6 0.6 0.6
+```
+
+虽然 `.block()` 方法可用于任何块操作，但还有其他方法用于特殊情况，可以提供更好的性能。在性能表现上，最重要的是能在编译时给Eigen尽可能多的信息。例如，所使用的块是矩阵的一整列，那么使用`.col()`函数可以让Eigen知道这只是一列，从而给更多的优化机会。
+
+以下部分描述了这些特殊方法。
+
+
+
+#### 列和行
+
+单独的列和行是特殊的块，Eigen提供了更便捷的方法`.col()`和`.row()`处理这些块。
+
+| 块操作  | 方法           |
+| :------ | :------------- |
+| 第 i 行 | matrix.row(i); |
+| 第 i 列 | matrix.col(j); |
+
+`row()`和`col()`的参数是需要访问的行和列的索引，在Eigen中是从0开始的。
+
+示例如下：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+using namespace std;
+ 
+int main()
+{
+  Eigen::MatrixXf m(3,3);
+  m << 1,2,3,
+       4,5,6,
+       7,8,9;
+  cout << "Here is the matrix m:" << endl << m << endl;
+  cout << "2nd Row: " << m.row(1) << endl;
+  m.col(2) += 3 * m.col(0);
+  cout << "After adding 3 times the first column into the third column, the matrix m is:\n";
+  cout << m << endl;
+}
+```
+
+输出如下：
+
+```c++
+Here is the matrix m:
+1 2 3
+4 5 6
+7 8 9
+2nd Row: 4 5 6
+After adding 3 times the first column into the third column, the matrix m is:
+ 1  2  6
+ 4  5 18
+ 7  8 30
+```
+
+如该示例所示块表达式可以像任何其他表达式一样用于算术。
+
+
+
+#### 关于角的操作
+
+Eigen还对位于矩阵或数组的角或边的块提供了特殊方法，例如：`.topLeftCorner()` 可以用于引用一个矩阵左上角的块。
+
+下表列出了各种各样的可能：
+
+| 块操作                       | 构建一个动态大小的块表达式     | 构建一个固定大小的块表达式       |
+| :--------------------------- | :----------------------------- | :------------------------------- |
+| 左上角的一个大小为p*q的块    | matrix.topLeftCorner(p,q);     | matrix.topLeftCorner<p,q>();     |
+| 左下角的一个大小为p*q的块    | matrix.bottomLeftCorner(p,q);  | matrix.bottomLeftCorner<p,q>();  |
+| 右上角的一个大小为p*q的块    | matrix.topRightCorner(p,q);    | matrix.topRightCorner<p,q>();    |
+| 右下角的一个大小为p*q的块    | matrix.bottomRightCorner(p,q); | matrix.bottomRightCorner<p,q>(); |
+| 包含前 q 行的块              | matrix.topRows(q);             | matrix.topRows<q>();             |
+| 包含后 q 行的块              | matrix.bottomRows(q);          | matrix.bottomRows<q>();          |
+| 包含前 p 列的块              | matrix.leftCols(p);            | matrix.leftCols<p>();            |
+| 包含后 p 列的块              | matrix.rightCols(q);           | matrix.rightCols<q>();           |
+| 包含从第 i 列开始的 q 列的块 | matrix.middleCols(i,q);        | matrix.middleCols<q>(i);         |
+| 包含从第 i 行开始的 q 行的块 | matrix.middleRows(i,q);        | matrix.middleRows<q>(i);         |
+
+下面是一个简单的例子，描述了上面介绍的操作的使用：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+using namespace std;
+ 
+int main()
+{
+  Eigen::Matrix4f m;
+  m << 1, 2, 3, 4,
+       5, 6, 7, 8,
+       9, 10,11,12,
+       13,14,15,16;
+  cout << "m.leftCols(2) =" << endl << m.leftCols(2) << endl << endl;
+  cout << "m.bottomRows<2>() =" << endl << m.bottomRows<2>() << endl << endl;
+  m.topLeftCorner(1,3) = m.bottomRightCorner(3,1).transpose();
+  cout << "After assignment, m = " << endl << m << endl;
+}
+```
+
+输出如下：
+
+```c++
+m.leftCols(2) =
+ 1  2
+ 5  6
+ 9 10
+13 14
+
+m.bottomRows<2>() =
+ 9 10 11 12
+13 14 15 16
+
+After assignment, m = 
+ 8 12 16  4
+ 5  6  7  8
+ 9 10 11 12
+13 14 15 16
+```
+
+
+
+#### 向量的块操作
+
+Eigen提供了一组专门为向量和一维数组的特殊情况设计的块操作：
+
+| 块操作                               | 构建一个动态大小的块表达式 | 构建一个固定大小的块表达式 |
+| :----------------------------------- | :------------------------- | :------------------------- |
+| 包含前`n`个元素的块                  | vector.head(n);            | vector.head<n>();          |
+| 包含后`n`个元素的块                  | vector.tail(n);            | vector.tail<n>();          |
+| 包含从第 i 个元素开始的 n 个元素的块 | vector.segment(i,n);       | vector.segment<n>(i);      |
+
+示例如下：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+using namespace std;
+ 
+int main()
+{
+  Eigen::ArrayXf v(6);
+  v << 1, 2, 3, 4, 5, 6;
+  cout << "v.head(3) =" << endl << v.head(3) << endl << endl;
+  cout << "v.tail<3>() = " << endl << v.tail<3>() << endl << endl;
+  v.segment(1,4) *= 2;
+  cout << "after 'v.segment(1,4) *= 2', v =" << endl << v << endl;
+}
+```
+
+输出如下：
+
+```
+v.head(3) =
+1
+2
+3
+
+v.tail<3>() = 
+4
+5
+6
+
+after 'v.segment(1,4) *= 2', v =
+ 1
+ 4
+ 6
+ 8
+10
+ 6
+```
+
+
+
+### 3.1.5 切片和索引
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialSlicingIndexing.html)
+
+本文介绍了如何使用操作运算符`operator()`索引行和列的子集。该 API 在 Eigen 3.4 中引入。它支持 [block API](http://eigen.tuxfamily.org/dox/group__TutorialBlockOperations.html) 提供的所有功能。特别是，它支持切片，即获取一组行、列或元素，以及等间隔的从矩阵或者数组中提取元素。
+
+#### 概述
+
+所有上述操作都是通过`DenseBase::operator()(const RowIndices&, const ColIndices&)`来完成的，每一个参数可以是：
+
+- 索引单行或列的整数，包括符号索引
+- 符号`Eigen::all`表示按递增顺序排列的所有行或列
+- 由 `Eigen::seq`,` Eigen::seqN`或者` Eigen::placeholders::lastN` 函数构造的[算数序列](http://eigen.tuxfamily.org/dox/classEigen_1_1ArithmeticSequence.html)
+- 任意一维整数向量、数组，形式如Eigen `向量`、`数组`、`表达式`、`std::vector`、`std::array` 、 C的数组`int[N]`
+
+更一般的，该函数可以接受任何有下列两个成员函数接口的对象
+
+```c++
+<integral type> operator[](<integral type>) const;
+<integral type> size() const;
+```
+
+其中`<integral type>` 代表任何可以与`Eigen::index`兼容的整数，如`std::ptrdiff_t`
+
+
+
+#### 基本的切片
+
+通过`Eigen::seq`或`Eigen::seqN`函数，取矩阵或向量中均匀间隔的一组行、列或元素，其中`seq`代表算数序列。他们的用法如下：
+
+| 方法                                                         | 描述                                        | 示例                                                         |
+| :----------------------------------------------------------- | :------------------------------------------ | :----------------------------------------------------------- |
+| [seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(firstIdx,lastIdx) | 返回从`firstIdx` 到 `lastIdx`的整数序列     | [seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(2,5) <=> {2,3,4,5} |
+| [seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(firstIdx,lastIdx,incr) | 同上，但是索引步长为incr                    | [seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(2,8,2) <=> {2,4,6,8} |
+| [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(firstIdx,size) | 从`firstIdx`开始，索引步长1，总的个数为size | [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(2,5) <=> {2,3,4,5,6} |
+| [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(firstIdx,size,incr) | 同上，索引步长为incr                        | [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(2,3,3) <=> {2,5,8} |
+
+一旦算术序列通过`operator()`传递给它，`firststidx`和`lasttidx`参数也可以用`Eigen::last`符号来定义，该符号表示矩阵/向量的最后一行、最后一列或元素的索引，使用如下：
+
+| Intent                                                   | Code                                                         | Block-API equivalence            |
+| :------------------------------------------------------- | :----------------------------------------------------------- | :------------------------------- |
+| Bottom-left corner starting at row `i` with `n` columns  | A([seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(i,[last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d)), [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(0,n)) | A.bottomLeftCorner(A.rows()-i,n) |
+| Block starting at `i`,j having `m` rows, and `n` columns | A([seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(i,m), [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(i,n)) | A.block(i,j,m,n)                 |
+| Block starting at `i0`,j0 and ending at `i1`,j1          | A([seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(i0,i1), [seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(j0,j1) | A.block(i0,j0,i1-i0+1,j1-j0+1)   |
+| Even columns of A                                        | A([all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9), [seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(0,[last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d),2)) |                                  |
+| First `n` odd rows A                                     | A([seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(1,n,2), [all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9)) |                                  |
+| The last past one column                                 | A([all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9), [last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d)-1) | A.col(A.cols()-2)                |
+| The middle row                                           | A([last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d)/2,[all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9)) | A.row((A.rows()-1)/2)            |
+| Last elements of v starting at i                         | v([seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(i,[last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d))) | v.tail(v.size()-i)               |
+| Last `n` elements of v                                   | v([seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)([last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d)+1-n,[last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d))) | v.tail(n)                        |
+
+正如在上一个示例中看到的，引用最后n个元素(或行/列)编写起来有点麻烦。使用非默认增量时，这将变得更加棘手和容易出错。因此，Eigen提供了[Eigen::placeholders::lastN(size)](http://eigen.tuxfamily.org/dox/group__TutorialSlicingIndexing.html)和[Eigen::placeholders::lastN(size,incr) ](http://eigen.tuxfamily.org/dox/group__TutorialSlicingIndexing.html)函数来完成最后几个元素的提取，用法如下：
+
+|                                                |                                                              |                          |
+| :--------------------------------------------- | :----------------------------------------------------------- | :----------------------- |
+| Intent                                         | Code                                                         | Block-API equivalence    |
+| Last `n` elements of v                         | v(lastN(n))                                                  | v.tail(n)                |
+| Bottom-right corner of A of size `m` times `n` | v(lastN(m), lastN(n))                                        | A.bottomRightCorner(m,n) |
+| Bottom-right corner of A of size `m` times `n` | v(lastN(m), lastN(n))                                        | A.bottomRightCorner(m,n) |
+| Last `n` columns taking 1 column over 3        | A([all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9), lastN(n,3)) |                          |
 
 
 
