@@ -1,0 +1,13 @@
+#include <iostream>
+#include <Eigen/Dense>
+
+using Eigen::MatrixXi;
+using Eigen::Vector3d;
+
+int main()
+{
+    std::vector<int> ind{4,2,5,5,3};
+    MatrixXi A = MatrixXi::Random(4,6);
+    cout << "Initial matrix A:\n" << A << "\n\n";
+    cout << "A(all,ind):\n" << A(Eigen::placeholders::all,ind) << "\n\n";
+}
