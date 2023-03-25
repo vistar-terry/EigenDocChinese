@@ -1610,7 +1610,7 @@ after 'v.segment(1,4) *= 2', v =
 
 #### 基本的切片
 
-通过`Eigen::seq`或`Eigen::seqN`函数，取矩阵或向量中均匀间隔的一组行、列或元素，其中`seq`代表算数序列。他们的用法如下：
+通过`Eigen::seq`或`Eigen::seqN`函数，取矩阵或向量中均匀间隔的一组行、列或元素，其中`seq`代表等差数列，用法如下：
 
 | 方法                                                         | 描述                                        | 示例                                                         |
 | :----------------------------------------------------------- | :------------------------------------------ | :----------------------------------------------------------- |
@@ -1619,29 +1619,221 @@ after 'v.segment(1,4) *= 2', v =
 | [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(firstIdx,size) | 从`firstIdx`开始，索引步长1，总的个数为size | [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(2,5) <=> {2,3,4,5,6} |
 | [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(firstIdx,size,incr) | 同上，索引步长为incr                        | [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(2,3,3) <=> {2,5,8} |
 
-一旦算术序列通过`operator()`传递给它，`firststidx`和`lasttidx`参数也可以用`Eigen::last`符号来定义，该符号表示矩阵/向量的最后一行、最后一列或元素的索引，使用如下：
+一旦等差数列通过`operator()`传递给它，`firstIdx`和`lastIdx`参数也可以用`Eigen::last`符号来定义，该符号表示矩阵/向量的最后一行、最后一列或最后一个元素的索引，使用如下：
 
-| Intent                                                   | Code                                                         | Block-API equivalence            |
-| :------------------------------------------------------- | :----------------------------------------------------------- | :------------------------------- |
-| Bottom-left corner starting at row `i` with `n` columns  | A([seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(i,[last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d)), [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(0,n)) | A.bottomLeftCorner(A.rows()-i,n) |
-| Block starting at `i`,j having `m` rows, and `n` columns | A([seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(i,m), [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(i,n)) | A.block(i,j,m,n)                 |
-| Block starting at `i0`,j0 and ending at `i1`,j1          | A([seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(i0,i1), [seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(j0,j1) | A.block(i0,j0,i1-i0+1,j1-j0+1)   |
-| Even columns of A                                        | A([all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9), [seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(0,[last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d),2)) |                                  |
-| First `n` odd rows A                                     | A([seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(1,n,2), [all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9)) |                                  |
-| The last past one column                                 | A([all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9), [last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d)-1) | A.col(A.cols()-2)                |
-| The middle row                                           | A([last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d)/2,[all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9)) | A.row((A.rows()-1)/2)            |
-| Last elements of v starting at i                         | v([seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(i,[last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d))) | v.tail(v.size()-i)               |
-| Last `n` elements of v                                   | v([seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)([last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d)+1-n,[last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d))) | v.tail(n)                        |
+| 目的                                          | 代码                                                         | 等价的块操作                     |
+| :-------------------------------------------- | :----------------------------------------------------------- | :------------------------------- |
+| 包含从第i行到最后一行，从第0列开始，共n列的块 | A([seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(i,[last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d)), [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(0,n)) | A.bottomLeftCorner(A.rows()-i,n) |
+| 包含从第i行到第m行，从第j列开始，共n列的块    | A([seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(i,m), [seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(j,n)) | A.block(i,j,m,n)                 |
+| 包含从第i0行到第i1行，从第j0列到第j1列的块    | A([seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(i0,i1), [seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(j0,j1) | A.block(i0,j0,i1-i0+1,j1-j0+1)   |
+| A的偶数列                                     | A([all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9), [seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(0,[last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d),2)) |                                  |
+| A的前n个奇数行                                | A([seqN](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a3a3c346d2a61d1e8e86e6fb4cf57fbda)(1,n,2), [all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9)) |                                  |
+| 倒数第二列                                    | A([all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9), [last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d)-1) | A.col(A.cols()-2)                |
+| A的中间一行                                   | A([last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d)/2,[all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9)) | A.row((A.rows()-1)/2)            |
+| 向量v从第i个元素到最后一个元素                | v([seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)(i,[last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d))) | v.tail(v.size()-i)               |
+| 向量v的最后n个元素                            | v([seq](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a0c04400203ca9b414e13c9c721399969)([last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d)+1-n,[last](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga66661a473fe06e47e3fd5c591b6ffe8d))) | v.tail(n)                        |
 
-正如在上一个示例中看到的，引用最后n个元素(或行/列)编写起来有点麻烦。使用非默认增量时，这将变得更加棘手和容易出错。因此，Eigen提供了[Eigen::placeholders::lastN(size)](http://eigen.tuxfamily.org/dox/group__TutorialSlicingIndexing.html)和[Eigen::placeholders::lastN(size,incr) ](http://eigen.tuxfamily.org/dox/group__TutorialSlicingIndexing.html)函数来完成最后几个元素的提取，用法如下：
+示例如下：
 
-|                                                |                                                              |                          |
-| :--------------------------------------------- | :----------------------------------------------------------- | :----------------------- |
-| Intent                                         | Code                                                         | Block-API equivalence    |
-| Last `n` elements of v                         | v(lastN(n))                                                  | v.tail(n)                |
-| Bottom-right corner of A of size `m` times `n` | v(lastN(m), lastN(n))                                        | A.bottomRightCorner(m,n) |
-| Bottom-right corner of A of size `m` times `n` | v(lastN(m), lastN(n))                                        | A.bottomRightCorner(m,n) |
-| Last `n` columns taking 1 column over 3        | A([all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9), lastN(n,3)) |                          |
+```c++
+MatrixXi A = MatrixXi::Random(7, 6);
+cout << "Initial matrix A:\n"
+     << A << "\n\n";
+
+// 包含从第i行到最后一行，从第0列开始，共n列的块(i: 2, n: 3)
+cout << "A(seq(i,Eigen::last), seqN(0,n)): (i: 2, n: 3)\n"
+     << A(seq(2, Eigen::last), seqN(0, 3)) << "\n\n";
+
+// 包含从第i行到第m行，从第j列开始，共n列的块(i: 1, m: 2, j: 2, n: 4)
+cout << "A(seq(i,m), seqN(j,n)): (i: 1, m: 2, j: 2, n: 4)\n"
+     << A(seqN(1, 2), seqN(2, 4)) << "\n\n";
+
+// 包含从第i0行到第i1行，从第j0列到第j1列的块(i0: 1, i1: 2, j0: 2, j1: 4)
+cout << "A(seq(i0,i1), seq(j0,j1)): (i0: 1, i1: 2, j0: 2, j1: 4)\n"
+     << A(seq(1, 2), seq(2, 4)) << "\n\n";
+
+// A的偶数列
+cout << "A的偶数列: \n"
+     << A(Eigen::all, seq(0, Eigen::last, 2)) << "\n\n";
+
+// A的前n个奇数行 (n: 3)
+cout << "A的前n个奇数行: (n: 3)\n"
+     << A(seqN(1, 3, 2), Eigen::all) << "\n\n";
+
+// A的倒数第二列
+cout << "A的倒数第二列: \n"
+     << A(Eigen::all, Eigen::last-1) << "\n\n";
+
+// A的中间一行
+cout << "A的中间一行: \n"
+     << A(Eigen::last/2, Eigen::all) << "\n\n";
+
+
+Eigen::VectorXi v{{4,2,5,8,3}};
+cout << "Initial vector v:\n"
+     << v << "\n\n";
+
+// 向量v从第i个元素到最后一个元素 (i: 2)
+cout << "向量v从第i个元素到最后一个元素: (i: 2)\n"
+     << v(seq(2, Eigen::last)) << "\n\n";
+
+// 向量v最后n个元素
+cout << "向量v最后n个元素: (n: 3)\n"
+     << v(seq(Eigen::last-3+1, Eigen::last)) << "\n\n";
+```
+
+输出如下：
+
+```
+Initial matrix A:
+  730547559   576018668   971155939  -552146456  1071432243    52156343
+ -226810938  -477225175   893772102  -779039257  -605038689   -13780431
+  607950953   115899597   291438716   653214605    27772105  1015276632
+  640895091   -48539462   466641602  -737276042   728237978  -445566813
+  884005969   276748203  -769652652  -212720294   241892198   582736218
+ -649503489  -290373134   229713912  -795018962  -438018766    57434405
+ -353856438    28778235 -1038736613  -840076701   295391245   579635549
+
+A(seq(i,Eigen::last), seqN(0,n)): (i: 2, n: 3)
+  607950953   115899597   291438716
+  640895091   -48539462   466641602
+  884005969   276748203  -769652652
+ -649503489  -290373134   229713912
+ -353856438    28778235 -1038736613
+
+A(seq(i,m), seqN(j,n)): (i: 1, m: 2, j: 2, n: 4)
+ 893772102 -779039257 -605038689  -13780431
+ 291438716  653214605   27772105 1015276632
+
+A(seq(i0,i1), seq(j0,j1)): (i0: 1, i1: 2, j0: 2, j1: 4)
+ 893772102 -779039257 -605038689
+ 291438716  653214605   27772105
+
+A的偶数列: 
+  730547559   971155939  1071432243
+ -226810938   893772102  -605038689
+  607950953   291438716    27772105
+  640895091   466641602   728237978
+  884005969  -769652652   241892198
+ -649503489   229713912  -438018766
+ -353856438 -1038736613   295391245
+
+A的前n个奇数行: (n: 3)
+-226810938 -477225175  893772102 -779039257 -605038689  -13780431
+ 640895091  -48539462  466641602 -737276042  728237978 -445566813
+-649503489 -290373134  229713912 -795018962 -438018766   57434405
+
+A的倒数第二列: 
+1071432243
+-605038689
+  27772105
+ 728237978
+ 241892198
+-438018766
+ 295391245
+
+A的中间一行: 
+ 640895091  -48539462  466641602 -737276042  728237978 -445566813
+
+Initial vector v:
+4
+2
+5
+8
+3
+
+向量v从第i个元素到最后一个元素: (i: 2)
+5
+8
+3
+
+向量v最后n个元素: (n: 3)
+5
+8
+3
+```
+
+
+
+正如在上一个示例中看到的，引用最后n个元素(或行/列)编写起来有点麻烦。使用非默认增量时，这将变得更加棘手和容易出错。因此，Eigen提供了`Eigen::placeholders::lastN(size)`和`Eigen::placeholders::lastN(size,incr)`函数来完成最后几个元素的提取，用法如下：
+
+> Eigen官方建议使用`Eigen::lastN(size)`和`Eigen::lastN(size,incr)`代替`Eigen::placeholders::lastN(size)`和`Eigen::placeholders::lastN(size,incr)`
+
+| 目的                | 代码                                                         | 等价的块操作             |
+| :------------------ | :----------------------------------------------------------- | :----------------------- |
+| 向量v的最后n个元素  | v(lastN(n))                                                  | v.tail(n)                |
+| A右下角m行n列的块   | A(lastN(m), lastN(n))                                        | A.bottomRightCorner(m,n) |
+| A的最后n列，步长为m | A([all](http://eigen.tuxfamily.org/dox/group__Core__Module.html#ga4abe6022fbef6cda264ef2947a2be1a9), lastN(n,m)) |                          |
+
+示例如下：
+
+```c++
+Eigen::VectorXi v{{4,2,5,8,3}};
+cout << "Initial vector v:\n"
+     << v << "\n\n";
+     
+// Eigen提供最后几个元素的提取函数
+// 向量v最后n个元素
+cout << "向量v最后n个元素: (n: 3)\n"
+     << v(Eigen::lastN(3)) << "\n\n";
+     
+MatrixXi A = MatrixXi::Random(7, 6);
+cout << "Initial matrix A:\n"
+     << A << "\n\n";
+     
+// A右下角m行n列的块
+cout << "A右下角m行n列的块: (m: 3, n: 2)\n"
+     << A(Eigen::lastN(3), Eigen::lastN(2)) << "\n\n";
+
+// A的最后n列，步长为m
+cout << "A的最后n列, 步长为m: (n: 3, m: 2)\n"
+     << A(Eigen::all, Eigen::lastN(3, 2)) << "\n\n";
+```
+
+输出如下：
+
+```
+Initial vector v:
+4
+2
+5
+8
+3
+
+向量v最后n个元素: (n: 3)
+5
+8
+3
+
+Initial matrix A:
+  730547559   576018668   971155939  -552146456  1071432243    52156343
+ -226810938  -477225175   893772102  -779039257  -605038689   -13780431
+  607950953   115899597   291438716   653214605    27772105  1015276632
+  640895091   -48539462   466641602  -737276042   728237978  -445566813
+  884005969   276748203  -769652652  -212720294   241892198   582736218
+ -649503489  -290373134   229713912  -795018962  -438018766    57434405
+ -353856438    28778235 -1038736613  -840076701   295391245   579635549
+
+A右下角m行n列的块: (m: 3, n: 2)
+ 241892198  582736218
+-438018766   57434405
+ 295391245  579635549
+
+A的最后n列, 步长为m: (n: 3, m: 2)
+ 576018668 -552146456   52156343
+-477225175 -779039257  -13780431
+ 115899597  653214605 1015276632
+ -48539462 -737276042 -445566813
+ 276748203 -212720294  582736218
+-290373134 -795018962   57434405
+  28778235 -840076701  579635549
+```
+
+
+
+
+
+
 
 
 
