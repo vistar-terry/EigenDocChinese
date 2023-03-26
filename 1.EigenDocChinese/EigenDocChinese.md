@@ -2086,6 +2086,192 @@ std::cout << m;
 
 
 
+#### 特殊矩阵和数组
+
+`matrix`和`array`类有如`Zero()`之类的静态方法，可用于将所有系数初始化为零。
+
+共有三种重载，第一个重载不需要任何参数，仅可以用在固定大小的对象。如果想要一个动态大小的对象，需要指定大小。因此，第二个重载需要一个参数用来初始化一维动态对象。第三个重载，需要两个参数用来初始化二维对象的大小。所有的重载解释如下：
+
+```c++
+std::cout << "A fixed-size array:\n";
+Array33f a1 = Array33f::Zero();
+std::cout << a1 << "\n\n";
+ 
+ 
+std::cout << "A one-dimensional dynamic-size array:\n";
+ArrayXf a2 = ArrayXf::Zero(3);
+std::cout << a2 << "\n\n";
+ 
+ 
+std::cout << "A two-dimensional dynamic-size array:\n";
+ArrayXXf a3 = ArrayXXf::Zero(3, 4);
+std::cout << a3 << "\n";
+```
+
+输出：
+
+```
+A fixed-size array:
+0 0 0
+0 0 0
+0 0 0
+
+A one-dimensional dynamic-size array:
+0
+0
+0
+
+A two-dimensional dynamic-size array:
+0 0 0 0
+0 0 0 0
+0 0 0 0
+```
+
+类似的，静态方法`Constant(value)`把所有系数都初始化为`value`。如果对象的大小需要指定，除了`value`参数还需要额外的参数，如 `MatrixXd::Constant(rows, cols, value)`。
+
+方法`Random()`用随机的数字填充矩阵或阵列。
+
+使用`Identity()`获取单位矩阵，这只能用于`matrix`而不能用于`vector`，因为单位矩阵的概念是线性代数中的。
+
+方法`LinSpaced(size,low,high)`只对向量和一维数组有效，它产生一个指定大小在`low`和`high`的等差数列。下面的例子解释`LinSpaced()`，打印一个表格，包含角度和弧度的对应值，以及他们的`sin`和`cos`值。
+
+```c++
+ArrayXXf table(10, 4);
+table.col(0) = ArrayXf::LinSpaced(10, 0, 90);
+table.col(1) = M_PI / 180 * table.col(0);
+table.col(2) = table.col(1).sin();
+table.col(3) = table.col(1).cos();
+std::cout << "  Degrees   Radians      Sine    Cosine\n";
+std::cout << table << std::endl;
+```
+
+输出：
+
+```
+Degrees   Radians      Sine    Cosine
+        0         0         0         1
+       10     0.175     0.174     0.985
+       20     0.349     0.342      0.94
+       30     0.524       0.5     0.866
+       40     0.698     0.643     0.766
+       50     0.873     0.766     0.643
+       60      1.05     0.866       0.5
+       70      1.22      0.94     0.342
+       80       1.4     0.985     0.174
+       90      1.57         1 -4.37e-08
+```
+
+此示例表明可以将像 `LinSpaced()` 这样的对象分配给变量（或表达式）。Eigen定义了诸如 [setZero()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#af230a143de50695d2d1fae93db7e4dcb)、[MatrixBase::setIdentity()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#a18e969adfdf2db4ac44c47fbdc854683) 和 [DenseBase::setLinSpaced()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a5d1ce9e801fa502e02b9b8cd9141ad0a) 之类的函数来执行此操作。下面的例子对比了三种方法来构造矩阵 $J = \begin{bmatrix} O & I \\ I & O \\ \end{bmatrix}$：
+
+```c++
+const int size = 6;
+MatrixXd mat1(size, size);
+mat1.topLeftCorner(size/2, size/2)     = MatrixXd::Zero(size/2, size/2);
+mat1.topRightCorner(size/2, size/2)    = MatrixXd::Identity(size/2, size/2);
+mat1.bottomLeftCorner(size/2, size/2)  = MatrixXd::Identity(size/2, size/2);
+mat1.bottomRightCorner(size/2, size/2) = MatrixXd::Zero(size/2, size/2);
+std::cout << mat1 << std::endl << std::endl;
+ 
+MatrixXd mat2(size, size);
+mat2.topLeftCorner(size/2, size/2).setZero();
+mat2.topRightCorner(size/2, size/2).setIdentity();
+mat2.bottomLeftCorner(size/2, size/2).setIdentity();
+mat2.bottomRightCorner(size/2, size/2).setZero();
+std::cout << mat2 << std::endl << std::endl;
+ 
+MatrixXd mat3(size, size);
+mat3 << MatrixXd::Zero(size/2, size/2), MatrixXd::Identity(size/2, size/2),
+        MatrixXd::Identity(size/2, size/2), MatrixXd::Zero(size/2, size/2);
+std::cout << mat3 << std::endl;
+```
+
+输出：
+
+```
+0 0 0 1 0 0
+0 0 0 0 1 0
+0 0 0 0 0 1
+1 0 0 0 0 0
+0 1 0 0 0 0
+0 0 1 0 0 0
+
+0 0 0 1 0 0
+0 0 0 0 1 0
+0 0 0 0 0 1
+1 0 0 0 0 0
+0 1 0 0 0 0
+0 0 1 0 0 0
+
+0 0 0 1 0 0
+0 0 0 0 1 0
+0 0 0 0 0 1
+1 0 0 0 0 0
+0 1 0 0 0 0
+0 0 1 0 0 0
+```
+
+可以在 [快速参考指南](http://eigen.tuxfamily.org/dox/group__QuickRefPage.html) 中找到所有预定义矩阵、向量和数组对象的摘要。
+
+#### 用作临时对象
+
+如上所示，`Zero()`和`Constant()` 等静态方法可以在声明时或在赋值符右侧初始化变量。可以认为这些方法返回一个矩阵或数组，实际上，它们返回所谓的表达式对象，该对象在需要的时候才被计算，所以这样的语法不会产生任何额外开销。
+
+这些表达式也可以用作临时对象。如下是 [入门](# 入门) 章节的第二个示例，其说明了这个特性：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+using Eigen::MatrixXd;
+using Eigen::VectorXd;
+ 
+int main()
+{
+  MatrixXd m = MatrixXd::Random(3,3);
+  m = (m + MatrixXd::Constant(3,3,1.2)) * 50;
+  std::cout << "m =" << std::endl << m << std::endl;
+  VectorXd v(3);
+  v << 1, 2, 3;
+  std::cout << "m * v =" << std::endl << m * v << std::endl;
+}
+```
+
+输出：
+
+```
+m =
+  94 89.8 43.5
+49.4  101 86.8
+88.3 29.8 37.8
+m * v =
+404
+512
+261
+```
+
+表达式 `m + MatrixXf::Constant(3,3,1.2)` 构造了一个 `3*3` 的矩阵，其元素全为`1.2+m`。
+
+逗号初始化也可以构造临时对象，下面的例子构造了一个`2*3`的随机矩阵，然后与矩阵 $\begin{bmatrix} 0 & 1 \\ 1 & 0 \\ \end{bmatrix}$ 相乘。
+
+```c++
+MatrixXf mat = MatrixXf::Random(2, 3);
+std::cout << mat << std::endl << std::endl;
+mat = (MatrixXf(2,2) << 0, 1, 1, 0).finished() * mat;
+std::cout << mat << std::endl;
+```
+
+输出：
+
+```
+ 0.68  0.566  0.823
+-0.211  0.597 -0.605
+
+-0.211  0.597 -0.605
+  0.68  0.566  0.823
+```
+
+在完成临时子矩阵的逗号初始化之后，这里需要使用`finished()`方法来获得实际的矩阵对象。
+
 
 
 
