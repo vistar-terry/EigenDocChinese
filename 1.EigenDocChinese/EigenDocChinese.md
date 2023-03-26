@@ -2274,6 +2274,141 @@ std::cout << mat << std::endl;
 
 
 
+### 3.1.7 归约、访问者和广播
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialReductionsVisitorsBroadcasting.html)
+
+本文介绍了`Eigen`的归约、访问者和广播，以及它们如何与矩阵和数组一起使用。
+
+#### 归约
+
+在Eigen，归约是把一个矩阵和数组变成一个标量的方法。一个经常用到的归约方法是`sum()`，它返回给定矩阵或数组内所有系数的总和。
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+using namespace std;
+int main()
+{
+  Eigen::Matrix2d mat;
+  mat << 1, 2,
+         3, 4;
+  cout << "Here is mat.sum():       " << mat.sum()       << endl;
+  cout << "Here is mat.prod():      " << mat.prod()      << endl;
+  cout << "Here is mat.mean():      " << mat.mean()      << endl;
+  cout << "Here is mat.minCoeff():  " << mat.minCoeff()  << endl;
+  cout << "Here is mat.maxCoeff():  " << mat.maxCoeff()  << endl;
+  cout << "Here is mat.trace():     " << mat.trace()     << endl;
+}
+```
+
+输出：
+
+```
+Here is mat.sum():       10
+Here is mat.prod():      24
+Here is mat.mean():      2.5
+Here is mat.minCoeff():  1
+Here is mat.maxCoeff():  4
+Here is mat.trace():     5
+```
+
+矩阵的迹可以通过`trace()`来得到，也可以通过`a.diagonal().sum()`得到。
+
+
+
+#### 范数计算
+
+向量的平方范数可以通过 [squaredNorm()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#ac8da566526419f9742a6c471bbd87e0a) 来计算。它等于向量本身的点积，等于其系数的绝对值平方和。
+
+Eigen还提供了 [norm()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#a196c4ec3c8ffdf5bda45d0f617154975) 方法，该方法返回`squaredNorm()`的平方根。
+
+这些方法也可以对矩阵进行操作，在这种情况下，`n×p` 矩阵被视为大小为` (n*p) `的向量，因此例如 `norm()` 方法返回 `Frobenius` 或 `Hilbert-Schmidt` 范数，即 $L_2$ 范数。我们避免谈论 `Euclidean ` 范数，因为这可能意味着不同的事情。
+
+如果想要其他系数的范数，可以使用[lpNorm\<p\>()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#a72586ab059e889e7d2894ff227747e35)方法。如果你想要 $\infty$ 范数，模板参数 p 可以取特殊值 `Infinity`，这将返回系数绝对值的最大值。如下：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+int main()
+{
+  Eigen::VectorXf v(2);
+  Eigen::MatrixXf m(2,2), n(2,2);
+  
+  v << -1,
+       2;
+  
+  m << 1,-2,
+       -3,4;
+ 
+  std::cout << "v.squaredNorm() = " << v.squaredNorm() << std::endl;
+  std::cout << "v.norm() = " << v.norm() << std::endl;
+  std::cout << "v.lpNorm<1>() = " << v.lpNorm<1>() << std::endl;
+  std::cout << "v.lpNorm<Infinity>() = " << v.lpNorm<Eigen::Infinity>() << std::endl;
+ 
+  std::cout << std::endl;
+  std::cout << "m.squaredNorm() = " << m.squaredNorm() << std::endl;
+  std::cout << "m.norm() = " << m.norm() << std::endl;
+  std::cout << "m.lpNorm<1>() = " << m.lpNorm<1>() << std::endl;
+  std::cout << "m.lpNorm<Infinity>() = " << m.lpNorm<Eigen::Infinity>() << std::endl;
+}
+```
+
+输出：
+
+```
+v.squaredNorm() = 5
+v.norm() = 2.23607
+v.lpNorm<1>() = 3
+v.lpNorm<Infinity>() = 2
+
+m.squaredNorm() = 30
+m.norm() = 5.47723
+m.lpNorm<1>() = 10
+m.lpNorm<Infinity>() = 4
+```
+
+1-范数和 $\infty$-范数矩阵运算符范数可以很容易地计算如下：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+int main()
+{
+  Eigen::MatrixXf m(2,2);
+  m << 1,-2,
+       -3,4;
+ 
+  std::cout << "1-norm(m)     = " << m.cwiseAbs().colwise().sum().maxCoeff()
+            << " == "             << m.colwise().lpNorm<1>().maxCoeff() << std::endl;
+ 
+  std::cout << "infty-norm(m) = " << m.cwiseAbs().rowwise().sum().maxCoeff()
+            << " == "             << m.rowwise().lpNorm<1>().maxCoeff() << std::endl;
+}
+```
+
+输出：
+
+```
+1-norm(m)     = 6 == 6
+infty-norm(m) = 7 == 7
+```
+
+有关这些表达式的语法的更多解释，请参见下文。
+
+#### 布尔归约
+
+
+
+
+
+
+
+
+
 
 
 
