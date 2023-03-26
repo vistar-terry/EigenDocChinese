@@ -1829,9 +1829,169 @@ A的最后n列, 步长为m: (n: 3, m: 2)
   28778235 -840076701  579635549
 ```
 
+#### 编译时的大小和步长
+
+在性能方面，Eigen和编译器可以利用编译时的大小和步长。为此，可以使用`Eigen::fix<val>`在编译时强制指定大小。而且，它可以和`Eigen::last`符号一起使用：
+
+```c++
+v(seq(last-fix<7>, last-fix<2>))
+```
+
+在这个示例中，Eigen在编译时就知道返回的表达式有6个元素。它等价于:
+
+```c++
+v(seqN(last-7, fix<6>))
+```
+
+我们可以访问A的偶数列，如：
+
+```c++
+A(all, seq(0,last,fix<2>))
+```
+
+#### 倒序
+
+也可以把步长设置为负数，按降序枚举行/列索引，例如，从第 20 列开始到第 10 列结束， 步长为`-2`：
+
+```c++
+A(all, seq(20, 10, fix<-2>))
+```
+
+从最后一行开始，取n行：
+
+```c++
+A(seqN(last, n, fix<-1>), all)
+```
+
+也可以使用`ArithmeticSequence::reverse() `方法来反转序列，前面的例子也可以写成：
+
+```c++
+A(lastN(n).reverse(), all)
+```
+
+#### 索引序列
+
+`operator()`输入的也可以是`ArrayXi`, `std::vector<int>`, `std::array<int,N>`等，如：
+
+示例：
+
+```c++
+std::vector<int> ind{4,2,5,5,3};
+MatrixXi A = MatrixXi::Random(4,6);
+cout << "Initial matrix A:\n" << A << "\n\n";
+cout << "A(all,ind):\n" << A(Eigen::placeholders::all,ind) << "\n\n";
+```
+
+输出如下：
+
+```
+Initial matrix A:
+  7   9  -5  -3   3 -10
+ -2  -6   1   0   5  -5
+  6  -3   0   9  -8  -8
+  6   6   3   9   2   6
+
+A(all,ind):
+  3  -5 -10 -10  -3
+  5   1  -5  -5   0
+ -8   0  -8  -8   9
+  2   3   6   6   9
+```
+
+也可以直接传递一个静态数组：
 
 
+```c++
+MatrixXi A = MatrixXi::Random(4,6);
+cout << "Initial matrix A:\n" << A << "\n\n";
+cout << "A(all,{4,2,5,5,3}):\n" << A(Eigen::placeholders::all,{4,2,5,5,3}) << "\n\n";
+```
 
+输出：
+
+```
+Initial matrix A:
+  7   9  -5  -3   3 -10
+ -2  -6   1   0   5  -5
+  6  -3   0   9  -8  -8
+  6   6   3   9   2   6
+
+A(all,{4,2,5,5,3}):
+  3  -5 -10 -10  -3
+  5   1  -5  -5   0
+ -8   0  -8  -8   9
+  2   3   6   6   9
+```
+
+也可以传递一个表达式：
+
+```c++
+ArrayXi ind(5); ind<<4,2,5,5,3;
+MatrixXi A = MatrixXi::Random(4,6);
+cout << "Initial matrix A:\n" << A << "\n\n";
+cout << "A(all,ind-1):\n" << A(Eigen::placeholders::all,ind-1) << "\n\n";
+```
+
+输出：
+
+```
+Initial matrix A:
+  7   9  -5  -3   3 -10
+ -2  -6   1   0   5  -5
+  6  -3   0   9  -8  -8
+  6   6   3   9   2   6
+
+A(all,ind-1):
+-3  9  3  3 -5
+ 0 -6  5  5  1
+ 9 -3 -8 -8  0
+ 9  6  2  2  3
+```
+
+当传递一个具有编译时大小的对象（如`Array4i`、`std::array<int, N>`或静态数组）时，返回的表达式也会显示编译时维度。
+
+#### 自定义索引列表
+
+更一般的，`operator()`可以接受任何类型的对象：
+
+```c++
+Index s = ind.size(); or Index s = size(ind);
+Index i;
+i = ind[i];
+```
+
+这意味着可以构建自己的序列生成器并将其传递给operator()。下面是一个通过重复填充额外的第一行和列来扩大给定矩阵的示例：
+
+```c++
+struct pad {
+  Index size() const { return out_size; }
+  Index operator[] (Index i) const { return std::max<Index>(0,i-(out_size-in_size)); }
+  Index in_size, out_size;
+};
+ 
+Matrix3i A;
+A.reshaped() = VectorXi::LinSpaced(9,1,9);
+cout << "Initial matrix A:\n" << A << "\n\n";
+MatrixXi B(5,5);
+B = A(pad{3,5}, pad{3,5});
+cout << "A(pad{3,N}, pad{3,N}):\n" << B << "\n\n";
+```
+
+输出：
+
+```
+Initial matrix A:
+1 4 7
+2 5 8
+3 6 9
+
+A(pad{3,N}, pad{3,N}):
+1 1 1 4 7
+1 1 1 4 7
+1 1 1 4 7
+2 2 2 5 8
+3 3 3 6 9
+```
 
 
 
