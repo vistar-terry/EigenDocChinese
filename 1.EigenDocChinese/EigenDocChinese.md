@@ -178,6 +178,8 @@ m * v =
 261
 ```
 
+> 注意，这里的浮点型数字，官网只截取了前面几位，而且做了四舍五入。
+
 ## 解释第二个例子
 
 版本一首先使用`Random()`函数初始化了一个`3*3`的矩阵，其中每一个元素的值都在`-1`和`1`之间。下一行使用了一个线性变换，这让所有的值都在`10`到`110`之间。函数`MatrixXd::Constant(3,3,1.2)`返回一个所有元素都是`1.2`的`3*3`矩阵。其余部分是标准计算。
@@ -204,7 +206,7 @@ $$
 
 ## 3.1 稠密矩阵与数组操作
 
-### 3.1.1 矩阵类
+### 3.1.1 Matrix类
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html)
 
@@ -960,7 +962,18 @@ Here is the vector v:  1  0  3 -3
 Its maximum coefficient (3) is at position 2
 ```
 
-
+> 这里的输出，自己测试和我官网给出的有出入：
+>
+> 1. 浮点型数字，官网截取了前面几位，而且做了四舍五入（前文已提到过）
+> 2. 整型数字，和官网完全不一样（暂未发现原因，如你知道欢迎留言）
+>
+> 关于这里的`Random()`函数，源码中有解释：
+>
+> > Numbers are uniformly spread through their whole definition range for integer types, and in the [-1:1] range for floating point scalar types.
+>
+> 对于整型，在整个定义范围内均匀分布；对于浮点型，分布在[-1,1]的范围内。所以，从代码来看，官网的结果 `Here is the vector v:  1  0  3 -3` 是不符合的。
+>
+> ！！！注意，以上两个问题，整篇都有，下文不再赘述！！！
 
 #### 操作的有效性
 
@@ -2733,17 +2746,46 @@ $$
 
 
 
+### 3.1.8 Reshape操作
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialReshape.html)
+
+从 `Eigen3.4` 开始，Eigen 发布了将矩阵或向量重塑为不同大小的便捷方法。所有的操作可以通过 `DenseBase::reshaped(NRowsType,NColsType)` 和 `DenseBase::reshaped()` 两个函数完成。这些函数并不直接改变原有的变量，而是返回一个重塑后的变量副本。
 
 
 
+#### 二维Reshape
 
+更一般的 `reshap` 转换是通过 `reshaped(nrows,ncols)` 处理的。这是一个将 `4x4` 矩阵重塑为 `2x8` 矩阵的示例：
 
+```c++
+#include <iostream>
+#include <Eigen/Dense>
 
+int main()
+{
+    Eigen::Matrix4i m = Eigen::Matrix4i::Random();
+    std::cout << "Here is the matrix m:" << std::endl
+              << m << std::endl;
+    std::cout << "Here is m.reshaped(2, 8):" << std::endl
+              << m.reshaped(2, 8) << std::endl;
+}
+```
 
+输出：
 
+```
+Here is the matrix m:
+ 7  9 -5 -3
+-2 -6  1  0
+ 6 -3  0  9
+ 6  6  3  9
+Here is m.reshaped(2, 8):
+ 7  6  9 -3 -5  0 -3  9
+-2  6 -6  6  1  3  0  9
+```
 
-
-
+默认情况下，无论输入表达式的存储顺序如何，输入元素始终按列优先顺序处理。有关排序、编译时大小和自动大小归约的更多信息，请参阅 `DenseBase::reshaped(NRowsType,NColsType)` 的文档，其中包含所有详细信息和许多示例（没找到文档，只找到源码，在`Eigen/src/plugins/ReshapedMethods.h`中）。
 
 
 
