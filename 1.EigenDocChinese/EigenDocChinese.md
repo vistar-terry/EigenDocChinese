@@ -2399,7 +2399,361 @@ infty-norm(m) = 7 == 7
 
 有关这些表达式的语法的更多解释，请参见下文。
 
+
+
 #### 布尔归约
+
+下列是关于布尔值的归约操作：
+
+- `all()`：给定Matrix或Array所有的系数都为true时，该函数返回true
+- `any()`：给定Matrix或Array至少有一个是true，函数返回true
+- `count()`：返回给定Matrix或Array中true的个数
+
+这些操作通常与相等操作符、Array提供的按系数比较操作等一起使用。例如，`array>0` 是一个数组，它与`array`大小相同且每一个元素都是布尔值，如果`array`的某个元素满足大于零，则数组`array>0`对应位置为`true`，否则为`false`。因此，`(array>0).all()` 检验是否`array`的所有的系数都是大于0的。
+
+示例如下：
+
+```c++
+#include <Eigen/Dense>
+#include <iostream>
+ 
+int main()
+{
+  Eigen::ArrayXXf a(2,2);
+  
+  a << 1,2,
+       3,4;
+ 
+  std::cout << "(a > 0).all()   = " << (a > 0).all() << std::endl;
+  std::cout << "(a > 0).any()   = " << (a > 0).any() << std::endl;
+  std::cout << "(a > 0).count() = " << (a > 0).count() << std::endl;
+  std::cout << std::endl;
+  std::cout << "(a > 2).all()   = " << (a > 2).all() << std::endl;
+  std::cout << "(a > 2).any()   = " << (a > 2).any() << std::endl;
+  std::cout << "(a > 2).count() = " << (a > 2).count() << std::endl;
+}
+```
+
+输出如下：
+
+```
+(a > 0).all()   = 1
+(a > 0).any()   = 1
+(a > 0).count() = 4
+
+(a > 2).all()   = 0
+(a > 2).any()   = 1
+(a > 2).count() = 2
+```
+
+
+
+#### 用户自定义的归约
+
+这里官方没有给出解释，建议参考函数 [DenseBase::redux()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a63ce1e4fab36bff43bbadcdd06a67724)
+
+
+
+#### 访问者函数
+
+当想要获取元素在 Matrix 或 Array 中的位置时，访问者函数很有用。例如 [maxCoeff(&x,&y)](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a7e6987d106f1cca3ac6ab36d288cc8e1) 和 [minCoeff(&x,&y)](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a0739f9c868c331031c7810e21838dcb2)，它们可用于查找 Matrix 或 Array 中最大或最小元素的位置，位置通过传入要存储行和列位置变量的指针返回。这些变量应该是 [Index](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a62e77e0933482dafde8fe197d9a2cfde) 类型，如下所示：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+  Eigen::MatrixXf m(2,2);
+  
+  m << 1, 2,
+       3, 4;
+ 
+  //get location of maximum
+  Eigen::Index maxRow, maxCol;
+  float max = m.maxCoeff(&maxRow, &maxCol);
+ 
+  //get location of minimum
+  Eigen::Index minRow, minCol;
+  float min = m.minCoeff(&minRow, &minCol);
+ 
+  std::cout << "Max: " << max <<  ", at: " <<
+     maxRow << "," << maxCol << std::endl;
+  std:: cout << "Min: " << min << ", at: " <<
+     minRow << "," << minCol << std::endl;
+}
+```
+
+输出为：
+
+```
+Max: 4, at: 1,1
+Min: 1, at: 0,0
+```
+
+这两个函数还会通过函数返回值返回最小或最大元素的值。
+
+
+
+#### 局部归约
+
+局部归约是可以对 Matrix 或 Array 按列或行进行操作的归约，对每一列或行应用归约操作并返回具有相应值的列或行向量。使用[colwise()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a1c0e1b6067ec1de6cb8799da55aa7d30)或[rowwise()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a6daa3a3156ca0e0722bf78638e1c7f28)方法进行部分归约。
+
+如下示例，获取给定矩阵中每一列中元素的最大值，并将结果存储在行向量中：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+using namespace std;
+int main()
+{
+  Eigen::MatrixXf mat(2,4);
+  mat << 1, 2, 6, 9,
+         3, 1, 7, 2;
+  
+  std::cout << "Column's maximum: " << std::endl
+   << mat.colwise().maxCoeff() << std::endl;
+}
+```
+
+输出：
+
+```
+Column's maximum: 
+3 2 7 9
+```
+
+类似的，可得到每一行中元素的最大值，如下：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+using namespace std;
+int main()
+{
+  Eigen::MatrixXf mat(2,4);
+  mat << 1, 2, 6, 9,
+         3, 1, 7, 2;
+  
+  std::cout << "Row's maximum: " << std::endl
+   << mat.rowwise().maxCoeff() << std::endl;
+}
+```
+
+请注意，按列操作返回行向量，而按行操作返回列向量。
+
+
+
+#### 将局部归约与其他操作结合
+
+也可以将局部归约的结果做进一步处理。
+
+如下示例，查找矩阵中元素总和最大的列：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+  Eigen::MatrixXf mat(2,4);
+  mat << 1, 2, 6, 9,
+         3, 1, 7, 2;
+  
+  Eigen::Index   maxIndex;
+  float maxNorm = mat.colwise().sum().maxCoeff(&maxIndex);
+  
+  std::cout << "Maximum sum at position " << maxIndex << std::endl;
+ 
+  std::cout << "The corresponding vector is: " << std::endl;
+  std::cout << mat.col( maxIndex ) << std::endl;
+  std::cout << "And its sum is is: " << maxNorm << std::endl;
+}
+```
+
+输出如下：
+
+```
+Maximum sum at position 2
+The corresponding vector is: 
+6
+7
+And its sum is is: 13
+```
+
+上面示例通过 `colwise()` 对每一列进行 `sum()` 归约，得到大小为 `1x4` 的新矩阵，如：
+$$
+m = \begin{bmatrix} 1 & 2 & 6 & 9 \\ 3 & 1 & 7 & 2 \\ \end{bmatrix}
+$$
+则有，
+$$
+m.colwise().sum() = \begin{bmatrix} 4 & 3 & 13 & 11 \end{bmatrix}
+$$
+最后，使用 `maxCoeff()` 方法得到最大总和的列索引。
+
+
+
+#### 广播
+
+广播的概念类似于局部归约，不同之处在于广播构造了一个表达式，通过在一个方向上复制向量（列或行）将其解释为矩阵。
+
+如下示例，将某个列向量添加到矩阵中的每一列：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+using namespace std;
+int main()
+{
+  Eigen::MatrixXf mat(2,4);
+  Eigen::VectorXf v(2);
+  
+  mat << 1, 2, 6, 9,
+         3, 1, 7, 2;
+         
+  v << 0,
+       1;
+       
+  //add v to each column of m
+  mat.colwise() += v;
+  
+  std::cout << "Broadcasting result: " << std::endl;
+  std::cout << mat << std::endl;
+}
+```
+
+输出：
+
+```
+Broadcasting result: 
+1 2 6 9
+4 2 8 3
+```
+
+用两种等价的方式解释语句 `mat.colwise() += v`。可以解释为它将向量 v 添加到矩阵的每一列，或者，也可以解释为将向量 v 重复四次形成一个 `4*2` 的矩阵，然后将其加到 `mat`，如下：
+$$
+\begin{bmatrix} 1 & 2 & 6 & 9 \\ 3 & 1 & 7 & 2 \\ \end{bmatrix} + \begin{bmatrix} 0 & 0 & 0 & 0 \\ 1 & 1 & 1 & 1 \\ \end{bmatrix} = \begin{bmatrix} 1 & 2 & 6 & 9 \\ 4 & 2 & 8 & 3 \\ \end{bmatrix}
+$$
+运算符 `-=`、`+` 和 `-` 也可以按列和行使用。在数组中，还可以使用运算符 `*=`、`/=`、`*` 和 `/` 来执行按元素乘法和按列或行进行除法，但这些运算符在矩阵上不能使用。如果要将矩阵 `mat` 的第 0 列与` v(0)` 相乘，第 1 列与 `v(1)` 相乘，依此类推，可以使用 `mat = mat * v.asDiagonal()`。
+
+需要指出的是，要按列或行相加的向量必须是 Vector 类型，不能是 Matrix，否则编译时会报错。这也意味着在使用 Matrix 操作时，广播操作只能应用于 Vector 类型的对象。这同样适用于 Array 类，其中 `VectorXf ` 的等效项是 `ArrayXf`。同样不应该在同一个表达式中混合使用数组和矩阵。
+
+如下示例，按行执行相同的操作：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+using namespace std;
+int main()
+{
+  Eigen::MatrixXf mat(2,4);
+  Eigen::VectorXf v(4);
+  
+  mat << 1, 2, 6, 9,
+         3, 1, 7, 2;
+         
+  v << 0,1,2,3;
+       
+  //add v to each row of m
+  mat.rowwise() += v.transpose();
+  
+  std::cout << "Broadcasting result: " << std::endl;
+  std::cout << mat << std::endl;
+}
+```
+
+输出：
+
+```
+Broadcasting result: 
+ 1  3  8 12
+ 3  2  9  5
+```
+
+
+
+#### 将广播与其他操作结合
+
+广播还可以与其他操作相结合，例如矩阵或数组操作、归约和局部归约。
+
+前面已经介绍了广播、归约和局部归约，现在可以深入研究一个更高级的示例，即在矩阵 m 的列中找到向量 v 的最近邻向量。本例将使用欧几里得距离，使用名为 `squaredNorm()` 的局部归约计算二次欧几里得距离：
+
+```c++
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+  Eigen::MatrixXf m(2,4);
+  Eigen::VectorXf v(2);
+  
+  m << 1, 23, 6, 9,
+       3, 11, 7, 2;
+       
+  v << 2,
+       3;
+ 
+  Eigen::Index index;
+  // find nearest neighbour
+  (m.colwise() - v).colwise().squaredNorm().minCoeff(&index);
+ 
+  std::cout << "Nearest neighbour is column " << index << ":" << std::endl;
+  std::cout << m.col(index) << std::endl;
+}
+```
+
+输出：
+
+```
+Nearest neighbour is column 0:
+1
+3
+```
+
+其中，语句 `(m.colwise() - v).colwise().squaredNorm().minCoeff(&index);` 解释如下：
+
+- `m.colwise() - v`： 是一个广播操作，从 m 中的每一列中减去 v。此操作的结果是一个新矩阵，其大小与矩阵 m 相同，如下：
+
+$$
+m.colwise - v = \begin{bmatrix} -1 & 21 & 4 & 7 \\ 0 & 8 & 4 & -1 \\ \end{bmatrix}
+$$
+
+- `(m.colwise() - v).colwise().squaredNorm()`：是一个局部归约操作，按列计算平方范数。此操作的结果是一个行向量，其中每个元素是 m 和 v 中每列之间的二次欧几里得距离，如下：
+
+
+$$
+(m.colwise() - v).colwise().squaredNorm() = \begin{bmatrix} 1 & 505 & 32 & 50 \end{bmatrix}
+$$
+
+- `minCoeff(&index)`：用于获取 m 中最接近 v 的列索引。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
