@@ -2759,17 +2759,9 @@ $$
 更一般的 `reshap` 转换是通过 `reshaped(nrows,ncols)` 处理的。这是一个将 `4x4` 矩阵重塑为 `2x8` 矩阵的示例：
 
 ```c++
-#include <iostream>
-#include <Eigen/Dense>
-
-int main()
-{
-    Eigen::Matrix4i m = Eigen::Matrix4i::Random();
-    std::cout << "Here is the matrix m:" << std::endl
-              << m << std::endl;
-    std::cout << "Here is m.reshaped(2, 8):" << std::endl
-              << m.reshaped(2, 8) << std::endl;
-}
+Matrix4i m = Matrix4i::Random();
+cout << "Here is the matrix m:" << endl << m << endl;
+cout << "Here is m.reshaped(2, 8):" << endl << m.reshaped(2, 8) << endl;
 ```
 
 输出：
@@ -2789,13 +2781,32 @@ Here is m.reshaped(2, 8):
 
 
 
+#### 一维线性Reshape
 
+reshape的一个非常常见的用法是将给定的二维矩阵或表达式变为一维线性的形式。在这种情况下，可以计算出维度，因此可以省略相关传参，如下例所示：
 
+```c++
+Matrix4i m = Matrix4i::Random();
+cout << "Here is the matrix m:" << endl << m << endl;
+cout << "Here is m.reshaped().transpose():" << endl << m.reshaped().transpose() << endl;
+cout << "Here is m.reshaped<RowMajor>().transpose():  " << endl << m.reshaped<RowMajor>().transpose() << endl;
+```
 
+输出：
 
+```
+Here is the matrix m:
+ 7  9 -5 -3
+-2 -6  1  0
+ 6 -3  0  9
+ 6  6  3  9
+Here is m.reshaped().transpose():
+ 7 -2  6  6  9 -6 -3  6 -5  1  0  3 -3  0  9  9
+Here is m.reshaped<RowMajor>().transpose():  
+ 7  9 -5 -3 -2 -6  1  0  6 -3  0  9  6  6  3  9
+```
 
-
-
+`.transpose()` 方法始终返回列向量，默认情况下，元素始终按列优先排序。同样，请参阅 `DenseBase::reshaped()`  的文档以获得对排序的更多信息。
 
 
 
