@@ -2810,11 +2810,75 @@ Here is m.reshaped<RowMajor>().transpose():
 
 
 
+#### 原地Reshape
 
+上述示例都是另外创建一个reshape对象，但怎么将一个给定矩阵原地reshape呢？这个操作只适用于具有运行时维度的矩阵和数组。通常这可以通过 `PlainObjectBase::resize(Index,Index)` 来完成：
 
+```c++
+MatrixXi m = Matrix4i::Random();
+cout << "Here is the matrix m:" << endl << m << endl;
+cout << "Here is m.reshaped(2, 8):" << endl << m.reshaped(2, 8) << endl;
+m.resize(2,8);
+cout << "Here is the matrix m after m.resize(2,8):" << endl << m << endl;
+```
 
+输出：
 
+```
+Here is the matrix m:
+ 7  9 -5 -3
+-2 -6  1  0
+ 6 -3  0  9
+ 6  6  3  9
+Here is m.reshaped(2, 8):
+ 7  6  9 -3 -5  0 -3  9
+-2  6 -6  6  1  3  0  9
+Here is the matrix m after m.resize(2,8):
+ 7  6  9 -3 -5  0 -3  9
+-2  6 -6  6  1  3  0  9
+```
 
+但是请注意，与 `reshaped` 不同，`resize` 的结果取决于输入的存储顺序。因此它的行为类似于 `reshaped<AutoOrder>`：
+
+```c++
+Matrix<int,Dynamic,Dynamic,RowMajor> m = Matrix4i::Random();
+cout << "Here is the matrix m:" << endl << m << endl;
+cout << "Here is m.reshaped(2, 8):" << endl << m.reshaped(2, 8) << endl;
+cout << "Here is m.reshaped<AutoOrder>(2, 8):" << endl << m.reshaped<AutoOrder>(2, 8) << endl;
+m.resize(2,8);
+cout << "Here is the matrix m after m.resize(2,8):" << endl << m << endl;
+```
+
+输出：
+
+```
+Here is the matrix m:
+ 7 -2  6  6
+ 9 -6 -3  6
+-5  1  0  3
+-3  0  9  9
+Here is m.reshaped(2, 8):
+ 7 -5 -2  1  6  0  6  3
+ 9 -3 -6  0 -3  9  6  9
+Here is m.reshaped<AutoOrder>(2, 8):
+ 7 -2  6  6  9 -6 -3  6
+-5  1  0  3 -3  0  9  9
+Here is the matrix m after m.resize(2,8):
+ 7 -2  6  6  9 -6 -3  6
+-5  1  0  3 -3  0  9  9
+```
+
+最后，目前不支持将reshape处理后的矩阵分配给自身，也不支持由于别名而导致未定义的行为。禁止以下行为：
+
+```c++
+A = A.reshaped(2,8);
+```
+
+但这样是可以的：
+
+```c++
+A = A.reshaped(2,8).eval(); 
+```
 
 
 
