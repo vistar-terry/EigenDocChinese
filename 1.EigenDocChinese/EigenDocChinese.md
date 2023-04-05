@@ -3005,6 +3005,212 @@ Here is the sorted matrix A:
 
 
 
+## 3.10 与原始缓冲区的接口：Map 类
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialMapClass.html)
+
+本节解释了如何使用“原始”C/C++ 数组。这在各种情况下都很有用，特别是在将向量和矩阵从其他库“导入”到 Eigen 中时。
+
+
+
+### 介绍
+
+有时可能有一个预定义的数字数组，希望在 Eigen 中将其用作向量或矩阵。虽然可以通过复制数据实现，但最常见的情况是可能希望直接将此内存重新于 Eigen 类型，可以使用 `Map` 类很容易做到这一点。
+
+
+
+### Map类型与声明Map变量
+
+Map 对象具有与其等效的 Eigen 定义类型：
+
+```c++
+Map<Matrix<typename Scalar, int RowsAtCompileTime, int ColsAtCompileTime> >
+```
+
+请注意，在这种默认情况下，Map 只需要一个模板参数。
+
+要构造一个 Map 变量，需要另外两条信息：指向定义数组内存区域的指针、矩阵或向量所需形状大小。
+
+例如，要定义一个在编译时确定大小的浮点矩阵，可以执行以下操作：
+
+```
+Map<MatrixXf> mf(pf,rows,columns);
+```
+
+其中 `pf` 是一个 `float *` ，指向内存数组。
+
+固定大小的只读整数向量可以声明为：
+
+```c++
+Map<const Vector4i> mi(pi);
+```
+
+其中 `pi` 是一个 `int *`。在这种情况下，不必将大小传递给构造函数，因为它已经由 `Matrix/Array` 类型指定。
+
+请注意，Map 没有默认构造函数；使用时必须传递一个指针来初始化对象。但也可以规避这一要求（请参阅下文`更改map数组`）。 
+
+Map 足够灵活以适应各种不同的数据表示。还有两个其他可选模板参数：
+
+```c++
+Map<typename MatrixType,
+    int MapOptions,
+    typename StrideType>
+```
+
+其中：
+
+- `MapOptions`： 指定指针是对齐的还是未对齐的。默认为未对齐。
+
+- `StrideType`： 允许使用 Stride 类为内存阵列指定自定义布局。
+
+如下示例，指定数据数组为行优先格式：
+
+```c++
+// 代码索引 3-10-1-1
+int array[8];
+for(int i = 0; i < 8; ++i) array[i] = i;
+cout << "Column-major:\n" << Map<Matrix<int,2,4> >(array) << endl;
+cout << "Row-major:\n" << Map<Matrix<int,2,4,RowMajor> >(array) << endl;
+cout << "Row-major using stride:\n" <<
+  Map<Matrix<int,2,4>, Unaligned, Stride<1,4> >(array) << endl;
+```
+
+输出：
+
+```
+Column-major:
+0 2 4 6
+1 3 5 7
+Row-major:
+0 1 2 3
+4 5 6 7
+Row-major using stride:
+0 1 2 3
+4 5 6 7
+```
+
+然而，`Stride` 比这更灵活；有关详细信息，请参阅 [Map](http://eigen.tuxfamily.org/dox/classEigen_1_1Map.html) 和 [Stride](http://eigen.tuxfamily.org/dox/classEigen_1_1Stride.html) 类的文档。
+
+
+
+### Map变量的使用
+
+可以像使用任何其他 `Eigen` 类型一样使用 `Map` 对象：
+
+```c++
+typedef Matrix<float,1,Dynamic> MatrixType;
+typedef Map<MatrixType> MapType;
+typedef Map<const MatrixType> MapTypeConst;   // a read-only map
+const int n_dims = 5;
+  
+MatrixType m1(n_dims), m2(n_dims);
+m1.setRandom();
+m2.setRandom();
+float *p = &m2(0);  // get the address storing the data for m2
+MapType m2map(p,m2.size());   // m2map shares data with m2
+MapTypeConst m2mapconst(p,m2.size());  // a read-only accessor for m2
+ 
+cout << "m1: " << m1 << endl;
+cout << "m2: " << m2 << endl;
+cout << "Squared euclidean distance: " << (m1-m2).squaredNorm() << endl;
+cout << "Squared euclidean distance, using map: " <<
+  (m1-m2map).squaredNorm() << endl;
+m2map(3) = 7;   // this will change m2, since they share the same array
+cout << "Updated m2: " << m2 << endl;
+cout << "m2 coefficient 2, constant accessor: " << m2mapconst(2) << endl;
+/* m2mapconst(2) = 5; */   // this yields a compile-time error
+```
+
+输出：
+
+```
+m1:   0.68 -0.211  0.566  0.597  0.823
+m2: -0.605  -0.33  0.536 -0.444  0.108
+Squared euclidean distance: 3.26
+Squared euclidean distance, using map: 3.26
+Updated m2: -0.605  -0.33  0.536      7  0.108
+m2 coefficient 2, constant accessor: 0.536
+```
+
+所有 `Eigen` 函数都可以接收 `Map` 对象，就像其他 Eigen 类型一样。但是，当编写自己的 `Eigen` 类型函数时，这不会自动发生，因为 `Map` 类型与其 `Dense` 等效类型不同。
+
+有关详细信息，请参阅[编写以特征类型为参数的函数](http://eigen.tuxfamily.org/dox/TopicFunctionTakingEigenTypes.html)。
+
+
+
+### 更改map数组
+
+可以在声明后使用 C++ `placement new` 语法更改 `Map` 对象的数组。
+
+```c++
+int data[] = {1,2,3,4,5,6,7,8,9};
+Map<RowVectorXi> v(data,4);
+cout << "The mapped vector v is: " << v << "\n";
+new (&v) Map<RowVectorXi>(data+4,5);
+cout << "Now v is: " << v << "\n";
+```
+
+输出：
+
+```
+The mapped vector v is: 1 2 3 4
+Now v is: 5 6 7 8 9
+```
+
+不管表面如何，这并没有调用内存分配器，因为语法指定了存储结果的位置。
+
+这种语法可以在不知道映射数组在内存中的位置的情况下声明一个 Map 对象：
+
+```c++
+Map<Matrix3f> A(NULL);  // don't try to use this matrix yet!
+VectorXf b(n_matrices);
+for (int i = 0; i < n_matrices; i++)
+{
+  new (&A) Map<Matrix3f>(get_matrix_pointer(i));
+  b(i) = A.trace();
+}
+```
+
+关于C++ `placement new` 语法：
+
+>C++ `placement new` 语法形式不同于普通的new操作。例如，普通的new操作使用如下语句`A* p=new A;`申请空间，而 `placement new` 操作则使用如下语句`A* p=new (ptr)A;`申请空间，其中`ptr`是指定的内存首地址。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
