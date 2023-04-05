@@ -6,6 +6,7 @@ using Eigen::VectorXd;
 
 int main()
 {
+    // 2-1-2-1 Matrices and vectors version 1
     MatrixXd m = MatrixXd::Random(3,3);
     m = (m + MatrixXd::Constant(3,3,1.2)) * 50;
     std::cout << "m =" << std::endl << m << std::endl;
