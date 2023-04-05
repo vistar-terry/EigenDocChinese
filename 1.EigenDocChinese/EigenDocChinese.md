@@ -202,11 +202,9 @@ $$
 
 
 
-# 三、章节
+# 三、稠密矩阵与数组操作
 
-## 3.1 稠密矩阵与数组操作
-
-### 3.1.1 Matrix类
+## 3.1 Matrix类
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html)
 
@@ -217,7 +215,7 @@ template<typename Scalar_, int Rows_, int Cols_, int Options_, int MaxRows_, int
 class Eigen::Matrix< Scalar_, Rows_, Cols_, Options_, MaxRows_, MaxCols_ >
 ```
 
-#### Matrix前三个模板参数
+### Matrix前三个模板参数
 
 Matrix类有`6`个模板参数，但现在了解前3个参数就足够了，剩下的3个参数有默认值，以后再讨论他们。
 
@@ -238,7 +236,7 @@ typedef Matrix<float, 4, 4> Matrix4f;
 
 下文会讨论这些常用类型的定义。
 
-#### 向量
+### 向量
 
 如上所述，在Eigen中，向量是一种特殊的矩阵，把只有`1`列的矩阵叫做`列向量`，通常把列向量称为`向量`。行数为`1`的矩阵叫做`行向量`。
 
@@ -254,7 +252,7 @@ typedef Matrix<float, 3, 1> Vector3f;
 typedef Matrix<int, 1, 2> RowVector2i;
 ```
 
-#### 动态的特殊值
+### 动态的特殊值
 
 当然，Eigen不局限于处理编译时维度已知的矩阵。模板参数`RowsAtCompileTime`和`ColsAtCompileTime`可以是一个动态值，这表明在编译时矩阵大小是未知的，必须当作运行时的变量进行处理。在Eigen的术语中，这叫做动态大小；在编译期间就知道大小叫做固定大小。例如，`MatrixXd`是`double`类型的动态大小矩阵，定义如下：
 
@@ -274,7 +272,7 @@ typedef Matrix<int, Dynamic, 1> VectorXi;
 Matrix<float, 3, Dynamic>
 ```
 
-#### 构造函数
+### 构造函数
 
 默认的构造函数始终可用，它不执行任何动态内存分配，也不初始化矩阵元素。例如：
 
@@ -343,7 +341,7 @@ VectorXd a {{1.5, 2.5, 3.5}};             // 包含3个元素的列向量，行�
 RowVectorXd b {{1.0, 2.0, 3.0, 4.0}};     // 包含4个元素的行向量，本来就是行向量
 ```
 
-#### 访问元素
+### 访问元素
 
 在Eigen中主要的元素访问与修改方法是重载括号运算符。对于矩阵，行索引总是优先传递的。对于向量，只需要传递一个索引，索引从0开始。如下：
 
@@ -381,7 +379,7 @@ Here is the vector v:
 
 运算符`[]`同样也被重载用于基于索引的向量访问，但C++不允许运算符`[]`传入多个参数。所以Eigen限制了运算符`[]`只能用于`vector`，因为C++语言的笨拙，会把 `matrix[i,j]` 编译成 `matrix[j]`。
 
-#### 逗号初始化
+### 逗号初始化
 
 可以使用所谓的`逗号初始化`语法初始化矩阵和向量。如下：
 
@@ -401,7 +399,7 @@ std::cout << m;
 7 8 9
 ```
 
-#### 重置大小
+### 重置大小
 
 矩阵的当前大小可以通过 [rows()](https://eigen.tuxfamily.org/dox/structEigen_1_1EigenBase.html#ac22eb0695d00edd7d4a3b2d0a98b81c2)、[cols()](https://eigen.tuxfamily.org/dox/structEigen_1_1EigenBase.html#a2d768a9877f5f69f49432d447b552bfe) 和 [size()](https://eigen.tuxfamily.org/dox/structEigen_1_1EigenBase.html#ae106171b6fefd3f7af108a8283de36c9) 来检索。这些方法分别返回行数、列数和元素个数。调整动态大小矩阵的大小可以使用 [resize()](https://eigen.tuxfamily.org/dox/classEigen_1_1PlainObjectBase.html#a9fd0703bd7bfe89d6dc80e2ce87c312a) 方法。
 
@@ -485,7 +483,7 @@ int main()
 The matrix m is of size 4x4
 ```
 
-#### 赋值和重置大小
+### 赋值和重置大小
 
 赋值是使用操作符 `=` 将一个矩阵复制到另一个矩阵的操作。Eigen会自动调整 `=` 左边的矩阵大小以便与和 `=` 右边的矩阵大小相匹配，例如：
 
@@ -508,7 +506,7 @@ a is now of size 3x3
 
 如果不想这种自动调整大小的操作发生，可以禁用它，详情参考[this page](http://eigen.tuxfamily.org/dox/TopicResizing.html)。
 
-#### 固定大小与动态大小
+### 固定大小与动态大小
 
 什么时候应该使用固定大小（例如`Matrix4f`），什么时候应该使用动态大小（例如`MatrixXf`）？
 
@@ -532,7 +530,7 @@ a is now of size 3x3
 
 使用固定大小的限制就是要求在编译的时候就知道大小，而且对于大矩阵，例如大于`32`的矩阵，使用固定大小的矩阵带来的优势可以忽略不计。更糟糕的是，试图在函数内部使用固定大小的矩阵创建一个非常大的矩阵可能会导致栈溢出，因为[Eigen](https://eigen.tuxfamily.org/dox/namespaceEigen.html)会尝试将数组自动分配为局部变量，而这通常是在栈上完成的。最后，根据情况，当使用动态大小时， [Eigen](https://eigen.tuxfamily.org/dox/namespaceEigen.html)也可以更积极地尝试向量化（使用 SIMD 指令），请参阅[矢量化](https://eigen.tuxfamily.org/dox/TopicVectorization.html)。
 
-#### 可选模板参数
+### 可选模板参数
 
 在开始的时候，我们提及`Matrix`类有6个模板参数，但是，目前只讨论了前三个，剩下的三个参数是可供选择的。下面是完整的模板参数：
 
@@ -550,7 +548,7 @@ Matrix<typename Scalar,
     > `Options` 是一个枚举，具体见 [Eigen::StorageOptions](https://eigen.tuxfamily.org/dox/group__enums.html#gaacded1a18ae58b0f554751f6cdf9eb13) 。
 - `MaxRowsAtCompileTime` 和 `MaxColsAtCompileTime` 是矩阵大小的上界，这让即使在编译时不知道矩阵的确切大小，但已知固定的上限，可以避免动态内存分配。例如，```Matrix<float, Dynamic, Dynamic, 0, 3, 4>``` 会在编译时使用一个大小为`12`的`float`类型的数组，而不需要动态分配内存。
 
-#### 其他常用Matrix类型
+### 其他常用Matrix类型
 
 [Eigen](https://eigen.tuxfamily.org/dox/namespaceEigen.html) 定义了以下 [Matrix](https://eigen.tuxfamily.org/dox/classEigen_1_1Matrix.html) 类型：
 
@@ -565,17 +563,17 @@ Matrix<typename Scalar,
 - `N`可以是`2`, `3`, `4` 或`X`(意思是`Dynamic`) 中的任何一个。
 - `t`可以是`i(int)`、`f(float)`、`d(double)`、`cf(complex<float>)` 或`cd(complex<double>)` 中的任何一个。虽然这里只定义了五种类型，但并不意味只支持这五种。例如，还支持所有标准整数类型，请参阅[标量类型](https://eigen.tuxfamily.org/dox/TopicScalarTypes.html)。
 
-### 3.1.2 矩阵与向量运算
+## 3.2 矩阵与向量运算
 
 [英文原文(Matrix and vector arithmetic)](http://eigen.tuxfamily.org/dox/group__TutorialMatrixArithmetic.html)
 
 本文章旨在提供有关如何使用 [Eigen](http://eigen.tuxfamily.org/dox/namespaceEigen.html) 在矩阵、向量和标量之间执行算术操作的概述和一些详细信息。
 
-#### 介绍
+### 介绍
 
 [Eigen](http://eigen.tuxfamily.org/dox/namespaceEigen.html) 通过重载常见的 C++ 算术运算符（如 `+`、`-`、`*`）或通过特殊方法（如 `dot()`、`cross()` 等）提供矩阵/向量算术运算。对于 [Matrix](http://eigen.tuxfamily.org/dox/classEigen_1_1Matrix.html) 类（矩阵和向量），重载运算符仅支持线性代数运算。例如，`matrix1 * matrix2` 代表矩阵乘法，`vector + scalar` 向量与标量的加法是不合法的。如果想执行各种数组运算，而不是线性代数，请参阅 [数组类与元素操作](http://eigen.tuxfamily.org/dox/group__TutorialArrayClass.html)。
 
-#### 加法与减法
+### 加法与减法
 
 操作符左右两侧的矩阵必须有相同的行数和列数，且它们的元素必须是同种类型，因为Eigen不支持自动类型转换。目前支持的运算符示例如下：
 
@@ -631,7 +629,7 @@ Now a =
 -6
 ```
 
-#### 标量的标量乘法与除法
+### 标量的标量乘法与除法
 
 标量的乘法和除法也非常简单。目前支持的运算符示例如下：
 
@@ -680,7 +678,7 @@ Now v =
 6
 ```
 
-#### 表达式模板
+### 表达式模板
 
 这是一个比较高级的话题，但在这里提出是比较有用的。在Eigen中，诸如`+`之类的算术运算符，他们自己不执行任何操作，只是返回一个表达式对象，该对象描述了将要执行的计算操作。实际的计算发生在后面整个表达式被求值的时侯，比如使用`=`运算符时。虽然这听起来很繁琐，但任何现代优化编译器都能优化掉这种抽象，从而得到完美优化代码。例如：
 
@@ -699,7 +697,7 @@ for(int i = 0; i < 50; ++i)
 
 因此，你不要害怕使用相对较大的运算表达式，这只会给Eigen更多机会进行优化。
 
-#### 转置与共轭
+### 转置与共轭
 
 矩阵或向量 $a$ 的转置($a^T$)、共轭($\overline{a}$)和伴随($a^*$ ，如共轭转置)可以分别通过函数`transpose()`、 `conjugate()`、`adjoint()`求得。
 
@@ -786,7 +784,7 @@ and after being transposed:
 
 同样，对于复杂矩阵的就地共轭也有`adjointInPlace()`函数。
 
-#### (矩阵与矩阵)和(矩阵与向量)的乘积
+### (矩阵与矩阵)和(矩阵与向量)的乘积
 
 矩阵与矩阵间的乘积是通过运算符`*`来完成的。由于向量是特殊的矩阵，所以向量和矩阵的乘积实际上只是矩阵与矩阵乘积的特例，向量与向量的外积也是如此。所有的情况都会被处理成两类：
 
@@ -857,7 +855,7 @@ c.noalias() += a * b;
 
 注意：对于担心性能的 BLAS 用户，表达式如：`c.noalias() -= 2 * a.adjoint() * b;`可以完全的优化并触发一个类似矩阵乘法的函数调用。
 
-#### 点积和叉积
+### 点积和叉积
 
 对于点积和叉积，需要使用 [dot()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#adfd32bf5fcf6ee603c924dde9bf7bc39) 和 [cross() ](http://eigen.tuxfamily.org/dox/group__Geometry__Module.html#ga0024b44eca99cb7135887c2aaf319d28)方法。当然，点积也可以像 `u.adjoint()*v` 一样得到一个1x1的矩阵。
 
@@ -894,7 +892,7 @@ Cross product:
 
 
 
-#### 基本算术的简化运算
+### 基本算术的简化运算
 
 Eigen还提供了一些简单操作来将给定的矩阵或向量计算为标量，例如求和（[sum()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#addd7080d5c202795820e361768d0140c)）、乘积 ( [prod()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#af119d9a4efe5a15cd83c1ccdf01b3a4f) ) 、最大值 ( [maxCoeff()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a7e6987d106f1cca3ac6ab36d288cc8e1) ) 和最小值 ( [minCoeff()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a0739f9c868c331031c7810e21838dcb2) ) 。
 
@@ -975,7 +973,7 @@ Its maximum coefficient (3) is at position 2
 >
 > ！！！注意，以上两个问题，整篇都有，下文不再赘述！！！
 
-#### 操作的有效性
+### 操作的有效性
 
 Eigen会检查操作的有效性，如果有错误，它会在编译的时候产生错误提示。这些错误提示可能又长又难看，但Eigen会把重要的信息写成大写，以使其更加显眼，例如：
 
@@ -995,17 +993,17 @@ v = m * v; // Run-time assertion failure here: "invalid matrix product"
 
 
 
-### 3.1.3 数组类与元素操作
+## 3.3 数组类与元素操作
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialArrayClass.html)
 
 本页旨在提供有关如何使用[Eigen](http://eigen.tuxfamily.org/dox/namespaceEigen.html)的[Array](http://eigen.tuxfamily.org/dox/classEigen_1_1Array.html)类的概述和说明。
 
-#### 什么是数组类？
+### 什么是数组类？
 
 与`Matrix`类用于线性代数计算不同的是，`Array`类提供了通用目的数组。此外，[Array](http://eigen.tuxfamily.org/dox/classEigen_1_1Array.html)类提供了一种执行按系数运算的简单方法，这可能没有线性代数意义，例如对每一个元素都加一个常数或按系数将两个数组相乘。
 
-#### 数组类型
+### 数组类型
 
 `Array`是一个类模板，采用与`Matrix`相同的模板参数。与`Matrix`一样，前三个模板参数是必需的：
 
@@ -1026,7 +1024,7 @@ Eigen还提供了一些常见的类型定义，其方式类似于`Matrix`类型�
 
 
 
-#### 访问数组中的值
+### 访问数组中的值
 
 就像矩阵一样，使用括号运算符可以访问数组中的值。另外，`<<`运算符可用于初始化数组（使用逗号初始化）或打印它们。
 
@@ -1070,7 +1068,7 @@ int main()
 
 
 
-#### 加法与减法
+### 加法与减法
 
 两个数组的加减法与矩阵相同。如果两个数组的大小相同，并且加法或减法是按系数进行的，则该操作有效。
 
@@ -1117,7 +1115,7 @@ a - 2 =
 
 
 
-#### 数组乘法
+### 数组乘法
 
 当然你可以将一个数组乘以一个标量，这与矩阵相同。数组与矩阵不同的地方在于自身相乘，矩阵将乘法解释为矩阵乘积，而数组将乘法解释为系数乘积。因此，两个数组相乘时它们必须具有相同的维度。
 
@@ -1149,7 +1147,7 @@ a * b =
 
 
 
-#### 其他按元素操作的运算
+### 其他按元素操作的运算
 
 除了上述的加法、减法和乘法运算符之外，`Array` 类还定义了其他按系数计算的运算。例如，`abs()` 方法对每个元素取绝对值，而`sqrt()`计算每个系数的平方根。如果你有两个相同大小的数组，你可以调用`min(.)`来构造一个数组，其元素是两个给定数组对应元素的最小值。这些操作在以下示例中进行了说明：
 
@@ -1203,7 +1201,7 @@ a.min(a.abs().sqrt()) =
 
 
 
-#### array和matrix表达式之间的转换
+### array和matrix表达式之间的转换
 
 什么时候应该使用`Matrix` 类的对象，什么时候应该使用 `Array` 类的对象呢？
 
@@ -1313,7 +1311,7 @@ int main()
 
 
 
-### 3.1.4 块操作
+## 3.4 块操作
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialBlockOperations.html)
 
@@ -1321,7 +1319,7 @@ int main()
 
 
 
-#### 使用块操作
+### 使用块操作
 
 在Eigen中最常见的块操作是`.block()` ，这有两个版本，语法如下：
 
@@ -1428,7 +1426,7 @@ Here is now a with bottom-right 2x3 block copied into top-left 2x3 block:
 
 
 
-#### 列和行
+### 列和行
 
 单独的列和行是特殊的块，Eigen提供了更便捷的方法`.col()`和`.row()`处理这些块。
 
@@ -1479,7 +1477,7 @@ After adding 3 times the first column into the third column, the matrix m is:
 
 
 
-#### 关于角的操作
+### 关于角的操作
 
 Eigen还对位于矩阵或数组的角或边的块提供了特殊方法，例如：`.topLeftCorner()` 可以用于引用一个矩阵左上角的块。
 
@@ -1542,7 +1540,7 @@ After assignment, m =
 
 
 
-#### 向量的块操作
+### 向量的块操作
 
 Eigen提供了一组专门为向量和一维数组的特殊情况设计的块操作：
 
@@ -1595,13 +1593,13 @@ after 'v.segment(1,4) *= 2', v =
 
 
 
-### 3.1.5 切片和索引
+## 3.5 切片和索引
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialSlicingIndexing.html)
 
 本文介绍了如何使用操作运算符`operator()`索引行和列的子集。该 API 在 Eigen 3.4 中引入。它支持 [block API](http://eigen.tuxfamily.org/dox/group__TutorialBlockOperations.html) 提供的所有功能。特别是，它支持切片，即获取一组行、列或元素，以及等间隔的从矩阵或者数组中提取元素。
 
-#### 概述
+### 概述
 
 所有上述操作都是通过`DenseBase::operator()(const RowIndices&, const ColIndices&)`来完成的，每一个参数可以是：
 
@@ -1621,7 +1619,7 @@ after 'v.segment(1,4) *= 2', v =
 
 
 
-#### 基本的切片
+### 基本的切片
 
 通过`Eigen::seq`或`Eigen::seqN`函数，取矩阵或向量中均匀间隔的一组行、列或元素，其中`seq`代表等差数列，用法如下：
 
@@ -1842,7 +1840,7 @@ A的最后n列, 步长为m: (n: 3, m: 2)
   28778235 -840076701  579635549
 ```
 
-#### 编译时的大小和步长
+### 编译时的大小和步长
 
 在性能方面，Eigen和编译器可以利用编译时的大小和步长。为此，可以使用`Eigen::fix<val>`在编译时强制指定大小。而且，它可以和`Eigen::last`符号一起使用：
 
@@ -1862,7 +1860,7 @@ v(seqN(last-7, fix<6>))
 A(all, seq(0,last,fix<2>))
 ```
 
-#### 倒序
+### 倒序
 
 也可以把步长设置为负数，按降序枚举行/列索引，例如，从第 20 列开始到第 10 列结束， 步长为`-2`：
 
@@ -1882,7 +1880,7 @@ A(seqN(last, n, fix<-1>), all)
 A(lastN(n).reverse(), all)
 ```
 
-#### 索引序列
+### 索引序列
 
 `operator()`输入的也可以是`ArrayXi`, `std::vector<int>`, `std::array<int,N>`等，如：
 
@@ -1963,7 +1961,7 @@ A(all,ind-1):
 
 当传递一个具有编译时大小的对象（如`Array4i`、`std::array<int, N>`或静态数组）时，返回的表达式也会显示编译时维度。
 
-#### 自定义索引列表
+### 自定义索引列表
 
 更一般的，`operator()`可以接受任何类型的对象：
 
@@ -2008,7 +2006,7 @@ A(pad{3,N}, pad{3,N}):
 
 
 
-### 3.1.6 高级初始化
+## 3.6 高级初始化
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialAdvancedInitialization.html)
 
@@ -2016,7 +2014,7 @@ A(pad{3,N}, pad{3,N}):
 
 
 
-#### 逗号初始化
+### 逗号初始化
 
 Eigen提供了一个逗号初始化语法，这让用户可以很容易的设置矩阵、向量、数组的系数。仅仅需要简单的列出系数，从左上角开始，从左到右，从上到下依次列出系数。初始化对象的大小需要提前指定，如果给的系数太多或太少，Eigen会报错，如下：
 
@@ -2099,7 +2097,7 @@ std::cout << m;
 
 
 
-#### 特殊矩阵和数组
+### 特殊矩阵和数组
 
 `matrix`和`array`类有如`Zero()`之类的静态方法，可用于将所有系数初始化为零。
 
@@ -2225,7 +2223,7 @@ std::cout << mat3 << std::endl;
 
 可以在 [快速参考指南](http://eigen.tuxfamily.org/dox/group__QuickRefPage.html) 中找到所有预定义矩阵、向量和数组对象的摘要。
 
-#### 用作临时对象
+### 用作临时对象
 
 如上所示，`Zero()`和`Constant()` 等静态方法可以在声明时或在赋值符右侧初始化变量。可以认为这些方法返回一个矩阵或数组，实际上，它们返回所谓的表达式对象，该对象在需要的时候才被计算，所以这样的语法不会产生任何额外开销。
 
@@ -2287,13 +2285,13 @@ std::cout << mat << std::endl;
 
 
 
-### 3.1.7 归约、访问者和广播
+## 3.7 归约、访问者和广播
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialReductionsVisitorsBroadcasting.html)
 
 本文介绍了`Eigen`的归约、访问者和广播，以及它们如何与矩阵和数组一起使用。
 
-#### 归约
+### 归约
 
 在Eigen，归约是把一个矩阵和数组变成一个标量的方法。一个经常用到的归约方法是`sum()`，它返回给定矩阵或数组内所有系数的总和。
 
@@ -2331,7 +2329,7 @@ Here is mat.trace():     5
 
 
 
-#### 范数计算
+### 范数计算
 
 向量的平方范数可以通过 [squaredNorm()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#ac8da566526419f9742a6c471bbd87e0a) 来计算。它等于向量本身的点积，等于其系数的绝对值平方和。
 
@@ -2414,7 +2412,7 @@ infty-norm(m) = 7 == 7
 
 
 
-#### 布尔归约
+### 布尔归约
 
 下列是关于布尔值的归约操作：
 
@@ -2461,13 +2459,13 @@ int main()
 
 
 
-#### 用户自定义的归约
+### 用户自定义的归约
 
 这里官方没有给出解释，建议参考函数 [DenseBase::redux()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a63ce1e4fab36bff43bbadcdd06a67724)
 
 
 
-#### 访问者函数
+### 访问者函数
 
 当想要获取元素在 Matrix 或 Array 中的位置时，访问者函数很有用。例如 [maxCoeff(&x,&y)](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a7e6987d106f1cca3ac6ab36d288cc8e1) 和 [minCoeff(&x,&y)](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a0739f9c868c331031c7810e21838dcb2)，它们可用于查找 Matrix 或 Array 中最大或最小元素的位置，位置通过传入要存储行和列位置变量的指针返回。这些变量应该是 [Index](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a62e77e0933482dafde8fe197d9a2cfde) 类型，如下所示：
 
@@ -2508,7 +2506,7 @@ Min: 1, at: 0,0
 
 
 
-#### 局部归约
+### 局部归约
 
 局部归约是可以对 Matrix 或 Array 按列或行进行操作的归约，对每一列或行应用归约操作并返回具有相应值的列或行向量。使用[colwise()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a1c0e1b6067ec1de6cb8799da55aa7d30)或[rowwise()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a6daa3a3156ca0e0722bf78638e1c7f28)方法进行部分归约。
 
@@ -2559,7 +2557,7 @@ int main()
 
 
 
-#### 将局部归约与其他操作结合
+### 将局部归约与其他操作结合
 
 也可以将局部归约的结果做进一步处理。
 
@@ -2608,7 +2606,7 @@ $$
 
 
 
-#### 广播
+### 广播
 
 广播的概念类似于局部归约，不同之处在于广播构造了一个表达式，通过在一个方向上复制向量（列或行）将其解释为矩阵。
 
@@ -2689,7 +2687,7 @@ Broadcasting result:
 
 
 
-#### 将广播与其他操作结合
+### 将广播与其他操作结合
 
 广播还可以与其他操作相结合，例如矩阵或数组操作、归约和局部归约。
 
@@ -2746,7 +2744,7 @@ $$
 
 
 
-### 3.1.8 Reshape操作
+## 3.8 Reshape操作
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialReshape.html)
 
@@ -2754,7 +2752,7 @@ $$
 
 
 
-#### 二维Reshape
+### 二维Reshape
 
 更一般的 `reshap` 转换是通过 `reshaped(nrows,ncols)` 处理的。这是一个将 `4x4` 矩阵重塑为 `2x8` 矩阵的示例：
 
@@ -2781,7 +2779,7 @@ Here is m.reshaped(2, 8):
 
 
 
-#### 一维线性Reshape
+### 一维线性Reshape
 
 reshape的一个非常常见的用法是将给定的二维矩阵或表达式变为一维线性的形式。在这种情况下，可以计算出维度，因此可以省略相关传参，如下例所示：
 
@@ -2810,7 +2808,7 @@ Here is m.reshaped<RowMajor>().transpose():
 
 
 
-#### 原地Reshape
+### 原地Reshape
 
 上述示例都是另外创建一个reshape对象，但怎么将一个给定矩阵原地reshape呢？这个操作只适用于具有运行时维度的矩阵和数组。通常这可以通过 `PlainObjectBase::resize(Index,Index)` 来完成：
 
@@ -2884,11 +2882,109 @@ A = A.reshaped(2,8).eval();
 
 
 
+## 3.9 STL迭代器和算法
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialSTL.html)
+
+从 3.4 版本开始，Eigen 的稠密矩阵和数组提供了 STL 兼容的迭代器。这使 `Eigen` 自然地与 `range-for` 循环和 STL 算法兼容。
+
+
+
+### 遍历一维数组和向量
+
+任何稠密一维表达式都支持`begin()/end()`方法以进行迭代。
+
+如下使用C++11的 `range-for` 循环：
+
+```c++
+VectorXi v = VectorXi::Random(4);
+cout << "Here is the vector v:\n";
+for(auto x : v) cout << x << " ";
+cout << "\n";
+```
+
+输出：
+
+```
+Here is the vector v:
+7 -2 6 6 
+```
+
+一维表达式也可以轻松传给 STL 算法：
+
+```c++
+Array4i v = Array4i::Random().abs();
+cout << "Here is the initial vector v:\n" << v.transpose() << "\n";
+std::sort(v.begin(), v.end());
+cout << "Here is the sorted vector v:\n" << v.transpose() << "\n";
+```
+
+输出：
+
+```
+Here is the initial vector v:
+7 2 6 6
+Here is the sorted vector v:
+2 6 6 7
+```
+
+与 `std::vector` 类似，一维表达式也有一对 `cbegin()/cend()` 方法，以方便地获取非 const 对象上的 const 迭代器。
+
+
+
+### 迭代二维数组和矩阵的元素
+
+STL 迭代器本质上是设计用于迭代一维结构的。这就是二维表达式禁用 `begin()/end()` 方法的原因。但通过 `reshaped()` 创建二维表达式的一维线性对象，仍然可以轻松地迭代二维表达式的所有元素。
+
+示例：
+
+```c++
+Matrix2i A = Matrix2i::Random();
+cout << "Here are the coeffs of the 2x2 matrix A:\n";
+for(auto x : A.reshaped())
+  cout << x << " ";
+cout << "\n";
+```
+
+输出：
+
+```
+Here are the coeffs of the 2x2 matrix A:
+7 -2 6 6 
+```
+
+
+
+### 迭代二维数组和矩阵的行或列
+
+也可以在二维表达式的行或列上使用迭代器。这可以通过 `rowwise()` 和 `colwise()` 代理实现。如下是对矩阵的每一行进行排序的示例：
+
+```c++
+ArrayXXi A = ArrayXXi::Random(4,4).abs();
+cout << "Here is the initial matrix A:\n" << A << "\n";
+for(auto row : A.rowwise())
+  std::sort(row.begin(), row.end());
+cout << "Here is the sorted matrix A:\n" << A << "\n";
+```
+
+输出：
+
+```
+Here is the initial matrix A:
+7 9 5 3
+2 6 1 0
+6 3 0 9
+6 6 3 9
+Here is the sorted matrix A:
+3 5 7 9
+0 1 2 6
+0 3 6 9
+3 6 6 9
+```
 
 
 
 
-## 四、扩展/自定义Eigen
 
 
 
@@ -2898,5 +2994,19 @@ A = A.reshaped(2,8).eval();
 
 
 
-## 五、常见话题
+
+
+
+
+# 四、扩展/自定义Eigen
+
+
+
+
+
+
+
+
+
+# 五、常见话题
 
