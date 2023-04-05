@@ -3098,6 +3098,7 @@ Row-major using stride:
 可以像使用任何其他 `Eigen` 类型一样使用 `Map` 对象：
 
 ```c++
+// 代码索引 3-10-2-1
 typedef Matrix<float,1,Dynamic> MatrixType;
 typedef Map<MatrixType> MapType;
 typedef Map<const MatrixType> MapTypeConst;   // a read-only map
@@ -3143,6 +3144,7 @@ m2 coefficient 2, constant accessor: 0.536
 可以在声明后使用 C++ `placement new` 语法更改 `Map` 对象的数组。
 
 ```c++
+// 代码索引 3-10-3-1
 int data[] = {1,2,3,4,5,6,7,8,9};
 Map<RowVectorXi> v(data,4);
 cout << "The mapped vector v is: " << v << "\n";
