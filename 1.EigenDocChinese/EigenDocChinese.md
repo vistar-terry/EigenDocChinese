@@ -52,7 +52,7 @@
 这是一个非常简单的程序。
 
 ```c++
-// 代码索引 2-1
+// 代码索引 2-1-1-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -95,6 +95,7 @@ g++ my_program.cpp -o my_program
 ## 第一个程序的解释
 
 ```c++
+// 代码索引 2-1-1-1
 #include <iostream>
 #include <Eigen/Dense>
 
@@ -126,7 +127,7 @@ Eigen头文件定义了很多类型，但对于简单的应用程序，仅使用
 版本一：
 
 ```c++
-// 代码索引 2-2
+// 代码索引 2-1-2-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -147,7 +148,7 @@ int main()
 版本二：
 
 ```c++
-// 代码索引 2-3
+// 代码索引 2-1-3-1
 #include <iostream>
 #include <Eigen/Dense>
 
@@ -1647,6 +1648,7 @@ after 'v.segment(1,4) *= 2', v =
 示例如下：
 
 ```c++
+// 代码索引 3-5-1-1
 MatrixXi A = MatrixXi::Random(7, 6);
 cout << "Initial matrix A:\n"
      << A << "\n\n";
@@ -2296,6 +2298,7 @@ std::cout << mat << std::endl;
 在Eigen，归约是把一个矩阵和数组变成一个标量的方法。一个经常用到的归约方法是`sum()`，它返回给定矩阵或数组内所有系数的总和。
 
 ```c++
+// 代码索引 3-7-1-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -2340,6 +2343,7 @@ Eigen还提供了 [norm()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBa
 如果想要其他系数的范数，可以使用[lpNorm\<p\>()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#a72586ab059e889e7d2894ff227747e35)方法。如果你想要 $\infty$ 范数，模板参数 p 可以取特殊值 `Infinity`，这将返回系数绝对值的最大值。如下：
 
 ```c++
+// 代码索引 3-7-2-1
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -2384,6 +2388,7 @@ m.lpNorm<Infinity>() = 4
 1-范数和 $\infty$-范数矩阵运算符范数可以很容易地计算如下：
 
 ```c++
+// 代码索引 3-7-2-2
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -2393,7 +2398,7 @@ int main()
   m << 1,-2,
        -3,4;
  
-  std::cout << "1-norm(m)     = " << m.cwiseAbs().colwise().sum().maxCoeff()
+  std::cout << "1-norm(m)     = " <是他的：：< m.cwiseAbs().colwise().sum().maxCoeff()
             << " == "             << m.colwise().lpNorm<1>().maxCoeff() << std::endl;
  
   std::cout << "infty-norm(m) = " << m.cwiseAbs().rowwise().sum().maxCoeff()
@@ -2425,6 +2430,7 @@ infty-norm(m) = 7 == 7
 示例如下：
 
 ```c++
+// 代码索引 3-7-3-1
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -2470,6 +2476,7 @@ int main()
 当想要获取元素在 Matrix 或 Array 中的位置时，访问者函数很有用。例如 [maxCoeff(&x,&y)](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a7e6987d106f1cca3ac6ab36d288cc8e1) 和 [minCoeff(&x,&y)](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a0739f9c868c331031c7810e21838dcb2)，它们可用于查找 Matrix 或 Array 中最大或最小元素的位置，位置通过传入要存储行和列位置变量的指针返回。这些变量应该是 [Index](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a62e77e0933482dafde8fe197d9a2cfde) 类型，如下所示：
 
 ```c++
+// 代码索引 3-7-4-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -2513,6 +2520,7 @@ Min: 1, at: 0,0
 如下示例，获取给定矩阵中每一列中元素的最大值，并将结果存储在行向量中：
 
 ```c++
+// 代码索引 3-7-5-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -2538,6 +2546,7 @@ Column's maximum:
 类似的，可得到每一行中元素的最大值，如下：
 
 ```c++
+// 代码索引 3-7-5-2
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -2564,6 +2573,7 @@ int main()
 如下示例，查找矩阵中元素总和最大的列：
 
 ```c++
+// 代码索引 3-7-5-3
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -2613,6 +2623,7 @@ $$
 如下示例，将某个列向量添加到矩阵中的每一列：
 
 ```c++
+// 代码索引 3-7-6-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -2655,6 +2666,7 @@ $$
 如下示例，按行执行相同的操作：
 
 ```c++
+// 代码索引 3-7-6-2
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -2694,6 +2706,7 @@ Broadcasting result:
 前面已经介绍了广播、归约和局部归约，现在可以深入研究一个更高级的示例，即在矩阵 m 的列中找到向量 v 的最近邻向量。本例将使用欧几里得距离，使用名为 `squaredNorm()` 的局部归约计算二次欧几里得距离：
 
 ```c++
+// 代码索引 3-7-7-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -2757,6 +2770,7 @@ $$
 更一般的 `reshap` 转换是通过 `reshaped(nrows,ncols)` 处理的。这是一个将 `4x4` 矩阵重塑为 `2x8` 矩阵的示例：
 
 ```c++
+// 代码索引 3-8-1-1
 Matrix4i m = Matrix4i::Random();
 cout << "Here is the matrix m:" << endl << m << endl;
 cout << "Here is m.reshaped(2, 8):" << endl << m.reshaped(2, 8) << endl;
@@ -2784,6 +2798,7 @@ Here is m.reshaped(2, 8):
 reshape的一个非常常见的用法是将给定的二维矩阵或表达式变为一维线性的形式。在这种情况下，可以计算出维度，因此可以省略相关传参，如下例所示：
 
 ```c++
+// 代码索引 3-8-1-2
 Matrix4i m = Matrix4i::Random();
 cout << "Here is the matrix m:" << endl << m << endl;
 cout << "Here is m.reshaped().transpose():" << endl << m.reshaped().transpose() << endl;
@@ -2813,6 +2828,7 @@ Here is m.reshaped<RowMajor>().transpose():
 上述示例都是另外创建一个reshape对象，但怎么将一个给定矩阵原地reshape呢？这个操作只适用于具有运行时维度的矩阵和数组。通常这可以通过 `PlainObjectBase::resize(Index,Index)` 来完成：
 
 ```c++
+// 代码索引 3-8-2-1
 MatrixXi m = Matrix4i::Random();
 cout << "Here is the matrix m:" << endl << m << endl;
 cout << "Here is m.reshaped(2, 8):" << endl << m.reshaped(2, 8) << endl;
@@ -2839,6 +2855,7 @@ Here is the matrix m after m.resize(2,8):
 但是请注意，与 `reshaped` 不同，`resize` 的结果取决于输入的存储顺序。因此它的行为类似于 `reshaped<AutoOrder>`：
 
 ```c++
+// 代码索引 3-8-2-2
 Matrix<int,Dynamic,Dynamic,RowMajor> m = Matrix4i::Random();
 cout << "Here is the matrix m:" << endl << m << endl;
 cout << "Here is m.reshaped(2, 8):" << endl << m.reshaped(2, 8) << endl;
@@ -2897,6 +2914,7 @@ A = A.reshaped(2,8).eval();
 如下使用C++11的 `range-for` 循环：
 
 ```c++
+// 代码索引 3-9-1-1
 VectorXi v = VectorXi::Random(4);
 cout << "Here is the vector v:\n";
 for(auto x : v) cout << x << " ";
@@ -2913,6 +2931,7 @@ Here is the vector v:
 一维表达式也可以轻松传给 STL 算法：
 
 ```c++
+// 代码索引 3-9-1-2
 Array4i v = Array4i::Random().abs();
 cout << "Here is the initial vector v:\n" << v.transpose() << "\n";
 std::sort(v.begin(), v.end());
@@ -2939,6 +2958,7 @@ STL 迭代器本质上是设计用于迭代一维结构的。这就是二维表�
 示例：
 
 ```c++
+// 代码索引 3-9-1-3
 Matrix2i A = Matrix2i::Random();
 cout << "Here are the coeffs of the 2x2 matrix A:\n";
 for(auto x : A.reshaped())
@@ -2960,6 +2980,7 @@ Here are the coeffs of the 2x2 matrix A:
 也可以在二维表达式的行或列上使用迭代器。这可以通过 `rowwise()` 和 `colwise()` 代理实现。如下是对矩阵的每一行进行排序的示例：
 
 ```c++
+// 代码索引 3-9-1-4
 ArrayXXi A = ArrayXXi::Random(4,4).abs();
 cout << "Here is the initial matrix A:\n" << A << "\n";
 for(auto row : A.rowwise())
