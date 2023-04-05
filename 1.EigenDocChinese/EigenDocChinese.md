@@ -757,7 +757,7 @@ and the result of the aliasing effect:
 2 4
 ```
 
-上述的问题就是所谓的混淆问题，在`debug`模式下，当`assertion`打开，这个问题可以自动检测到。（g++编译默认是debug模式，关闭需要使用`-DNDEBUG`选项）。
+上述的问题就是所谓的混叠问题，在`debug`模式下，当`assertion`打开，这个问题可以自动检测到。（g++编译默认是debug模式，关闭需要使用`-DNDEBUG`选项）。
 
 对于就地转置，可以使用`transposeInPlace()`函数：
 
@@ -3005,7 +3005,7 @@ Here is the sorted matrix A:
 
 
 
-## 3.10 与原始缓冲区的接口：Map 类
+## 3.10 原始缓冲区接口：Map 类
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialMapClass.html)
 
@@ -3179,19 +3179,209 @@ for (int i = 0; i < n_matrices; i++)
 
 
 
+## 3.11 混叠
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicAliasing.html)
+
+在 `Eigen` 中，混叠是指相同的矩阵（或数组或向量）出现在赋值操作符的左边和右边。如下表达式，`mat = 2*mat` 或者 `mat = mat.transpose()`。第一个表达式是没有问题的，但是第二个表达式，会出现不可预料的结果。这一节会解释什么是混叠，以及它的危害与处理方法。
 
 
 
+### 示例
+
+一个混叠问题的示例：
+
+```c++
+// 代码索引 3-11-1-1
+MatrixXi mat(3,3); 
+mat << 1, 2, 3,   4, 5, 6,   7, 8, 9;
+cout << "Here is the matrix mat:\n" << mat << endl;
+ 
+// This assignment shows the aliasing problem
+mat.bottomRightCorner(2,2) = mat.topLeftCorner(2,2);
+cout << "After the assignment, mat = \n" << mat << endl;
+```
+
+输出：
+
+```
+Here is the matrix mat:
+1 2 3
+4 5 6
+7 8 9
+After the assignment, mat = 
+1 2 3
+4 1 2
+7 4 1
+```
+
+可见输出不是所期望的。问题在于语句 `mat.bottomRightCorner(2,2) = mat.topLeftCorner(2,2);`，其中`mat(1,1)` 同时出现在赋值符号左侧的块 `mat.bottomRightCorner(2,2)` 和右侧的块 `mat.topLeftCorner(2,2) `中。赋值后，右下角的 `(2,2)` 项应该是赋值前 `mat(1,1)` 的值，即 `5`。但是，输出显示 `mat(2,2) `实际上是 `1`。问题在于 Eigen 对 `mat.topLeftCorner(2,2)` 使用惰性求值（参见 Eigen 中的[表达式模板](http://eigen.tuxfamily.org/dox/TopicEigenExpressionTemplates.html)）。赋值方式类似于：
+
+```c++
+mat(1,1) = mat(0,0);  // 1
+mat(1,2) = mat(0,1);  // 2
+mat(2,1) = mat(1,0);  // 4
+mat(2,2) = mat(1,1);  // 1
+```
+
+因此，`mat(2,2)` 被赋予 `mat(1,1)` 的新值而不是旧值。下一节将解释如何通过调用 `eval()` 来解决这个问题。
+
+另外，尝试缩小矩阵时，更容易出现混叠现象。例如，表达式 `vec = vec.head(n)` 和 `mat = mat.block(i,j,r,c)`。
+
+一般来说，编译时无法检测到混叠。如果第一个例子中的 `mat` 大一点，那么块就不会重叠，也就不会出现混叠问题。然而，Eigen 有时可以检测到一些混叠实例，尽管是在运行时。在 [3.2 矩阵与向量运算](#3.2 矩阵与向量运算) 中提到了以下混叠的示例：
+
+```c++
+Matrix2i a; a << 1, 2, 3, 4;
+cout << "Here is the matrix a:\n" << a << endl;
+ 
+a = a.transpose(); // !!! do NOT do this !!!
+cout << "and the result of the aliasing effect:\n" << a << endl;
+```
+
+输出：
+
+```
+Here is the matrix a:
+1 2
+3 4
+and the result of the aliasing effect:
+1 2
+2 4
+```
+
+默认情况下，Eigen 可以使用运行时断言来检测这一问题，退出并显示如下消息：
+
+```
+static void Eigen::internal::checkTransposeAliasing_impl<Derived, OtherDerived, MightHaveTransposeAliasing>::run(const Derived&, const OtherDerived&) [with Derived = Eigen::Matrix<int, 2, 2>; OtherDerived = Eigen::Transpose<Eigen::Matrix<int, 2, 2> >; bool MightHaveTransposeAliasing = true]: Assertion `(!check_transpose_aliasing_run_time_selector <typename Derived::Scalar,blas_traits<Derived>::IsTransposed,OtherDerived> ::run(extract_data(dst), other)) && "aliasing detected during transposition, use transposeInPlace() " "or evaluate the rhs into a temporary using .eval()"' failed.
+```
+
+用户可以通过定义 `EIGEN_NO_DEBUG` 宏来关闭 Eigen 的运行时断言来检测混叠问题，上面的程序是在关闭这个宏的情况下编译的，以说明混叠问题。关于Eigen的运行时断言详情请参考 [Assertions](https://link.zhihu.com/?target=https%3A//eigen.tuxfamily.org/dox/TopicAssertions.html)。
 
 
 
+### 解决混叠问题
+
+如果了解混叠问题的原因，那么很明显必须采取什么措施解决它：Eigen 必须将右侧评估为一个临时矩阵/数组，然后将其分配给左侧。`eval()`函数可以解决这一问题。
+
+示例 `3-11-1-1` 的更正版本如下：
+
+```c++
+// 代码索引 3-11-1-2
+MatrixXi mat(3,3); 
+mat << 1, 2, 3,   4, 5, 6,   7, 8, 9;
+cout << "Here is the matrix mat:\n" << mat << endl;
+ 
+// The eval() solves the aliasing problem
+mat.bottomRightCorner(2,2) = mat.topLeftCorner(2,2).eval();
+cout << "After the assignment, mat = \n" << mat << endl;
+```
+
+输出：
+
+```
+Here is the matrix mat:
+1 2 3
+4 5 6
+7 8 9
+After the assignment, mat = 
+1 2 3
+4 1 2
+7 4 5
+```
+
+`mat(2,2)` 在赋值后等于 `5`，这正是预期的结果。
+
+同样的解决方案也适用于第二个示例，使用转置：只需使用 `a = a.transpose().eval();` 替换 `a = a.transpose();` 即可。但是，在这种常见情况下，有更好的解决方案。Eigen 提供了专用函数 `transposeInPlace()` ，它用矩阵的转置替换矩阵。如下所示：
+
+```c++
+MatrixXf a(2,3); a << 1, 2, 3, 4, 5, 6;
+cout << "Here is the initial matrix a:\n" << a << endl;
+
+a.transposeInPlace();
+cout << "and after being transposed:\n" << a << endl;
+```
+
+输出：
+
+```
+Here is the initial matrix a:
+1 2 3
+4 5 6
+and after being transposed:
+1 4
+2 5
+3 6
+```
+
+如果 `xxxInPlace()` 函数可用，那么最好使用它，因为它可以更清楚地表明在做什么。这也允许 Eigen 更积极地进行优化。如下是 Eigen 提供的一些 `xxxInPlace()` 函数：
+
+|                            原函数                            |                        In-Place 函数                         |
+| :----------------------------------------------------------: | :----------------------------------------------------------: |
+| [MatrixBase::adjoint()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#afacca1f88da57e5cd87dd07c8ff926bb) | [MatrixBase::adjointInPlace()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#a51c5982c1f64e45a939515b701fa6f4a) |
+| [DenseBase::reverse()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a38ea394036d8b096abf322469c80198f) | [DenseBase::reverseInPlace()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#adb8045155ea45f7961fc2a5170e1d921) |
+| [LDLT::solve()](http://eigen.tuxfamily.org/dox/classEigen_1_1LDLT.html#a20cfad0f8808c84d150d1f90abe1fc87) |                     LDLT::solveInPlace()                     |
+| [LLT::solve()](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html#ac3c983a7853b079f52ab53b9442a5256) |                     LLT::solveInPlace()                      |
+|                   TriangularView::solve()                    |                TriangularView::solveInPlace()                |
+| [DenseBase::transpose()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a43cbcd866a0737eb56642c2e992f0afd) | [DenseBase::transposeInPlace()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#ac501bd942994af7a95d95bee7a16ad2a) |
+
+在使用像 `vec = vec.head(n)` 这样的表达式压缩矩阵或向量的特殊情况下，可以使用 [conservativeResize()](http://eigen.tuxfamily.org/dox/classEigen_1_1PlainObjectBase.html#a712c25be1652e5a64a00f28c8ed11462)
 
 
 
+### 混叠与组件操作
 
+从上面的例子可以看出，同一个矩阵或数组同时出现在赋值语句的左右两侧时，是一种很危险的事情。因此，通常需要显式计算赋值语句的右侧。但是对组件操作（例如矩阵相加、数乘、数组相乘）是很安全的。
 
+下面的示例只有组件的操作。因此，即使赋值运算符的两边出现相同的矩阵，也不需要 `eval()`。
 
+```c++
+MatrixXf mat(2,2); 
+mat << 1, 2,  4, 7;
+cout << "Here is the matrix mat:\n" << mat << endl << endl;
+ 
+mat = 2 * mat;
+cout << "After 'mat = 2 * mat', mat = \n" << mat << endl << endl;
+ 
+ 
+mat = mat - MatrixXf::Identity(2,2);
+cout << "After the subtraction, it becomes\n" << mat << endl << endl;
+ 
+ 
+ArrayXXf arr = mat;
+arr = arr.square();
+cout << "After squaring, it becomes\n" << arr << endl << endl;
+ 
+// Combining all operations in one statement:
+mat << 1, 2,  4, 7;
+mat = (2 * mat - MatrixXf::Identity(2,2)).array().square();
+cout << "Doing everything at once yields\n" << mat << endl << endl;
+```
 
+输出：
+
+```
+Here is the matrix mat:
+1 2
+4 7
+
+After 'mat = 2 * mat', mat = 
+ 2  4
+ 8 14
+
+After the subtraction, it becomes
+ 1  4
+ 8 13
+
+After squaring, it becomes
+  1  16
+ 64 169
+
+Doing everything at once yields
+  1  16
+ 64 169
+```
+
+通常，如果表达式右侧的 `(i,j)` 项仅依赖于左侧矩阵或数组的 `(i,j)` 项而不依赖于任何其他项，则赋值是安全的。在这种情况下，没有必要显式计算右侧。
 
 
 
