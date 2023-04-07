@@ -3478,9 +3478,67 @@ cout << A;
 
 
 
+## 3.12 存储顺序
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicStorageOrders.html)
+
+矩阵和二维数组有两种不同的存储顺序：列优先和行优先。本节解释了这些存储顺序以及如何指定应该使用哪一种。
 
 
 
+### 列优先和行优先存储
+
+矩阵的元素形成二维网格。然而，当矩阵存储在内存中时，元素必须以某种方式线性排列。有两种主要方法可以做到这一点，按行和按列。
+
+如果一个矩阵是逐行存储的，我们说它是按行优先顺序存储。首先存储整个第一行，然后存储整个第二行，依此类推。例如考虑矩阵：
+
+$$
+A=\begin{bmatrix} 8&2&2&9 \\ 9&1&4&4 \\ 3&5&4&5 \end{bmatrix}.
+$$
+如果该矩阵以行优先顺序存储，则元素在内存中的布局如下：
+
+`8 2 2 9 9 1 4 4 3 5 4 5 `
+
+另一方面，如果一个矩阵是按列存储的，则它以列优先顺序存储，从整个第一列开始，然后是整个第二列，依此类推。如果上述矩阵按列优先顺序存储，则布局如下：
+
+`8 9 3 2 1 5 2 4 4 9 4 5 `
+
+此示例由以下Eigen代码说明。它使用 `PlainObjectBase::data()` 函数，该函数返回指向矩阵第一个元素的指针。
+
+```cpp
+Matrix<int, 3, 4, ColMajor> Acolmajor;
+Acolmajor << 8, 2, 2, 9,
+             9, 1, 4, 4,
+             3, 5, 4, 5;
+cout << "The matrix A:" << endl;
+cout << Acolmajor << endl << endl; 
+ 
+cout << "In memory (column-major):" << endl;
+for (int i = 0; i < Acolmajor.size(); i++)
+  cout << *(Acolmajor.data() + i) << "  ";
+cout << endl << endl;
+ 
+Matrix<int, 3, 4, RowMajor> Arowmajor = Acolmajor;
+cout << "In memory (row-major):" << endl;
+for (int i = 0; i < Arowmajor.size(); i++)
+  cout << *(Arowmajor.data() + i) << "  ";
+cout << endl;
+```
+
+输出：
+
+```
+The matrix A:
+8 2 2 9
+9 1 4 4
+3 5 4 5
+
+In memory (column-major):
+8  9  3  2  1  5  2  4  4  9  4  5  
+
+In memory (row-major):
+8  2  2  9  9  1  4  4  3  5  4  5 
+```
 
 
 
