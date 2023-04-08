@@ -3560,6 +3560,39 @@ In memory (row-major):
 
 
 
+## 3.13 对齐问题
+
+### 3.13.1 对未对齐数组断言的解释
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html)
+
+该节将解释程序因断言失败而终止，如下所示：
+
+```bash
+my_program: path/to/eigen/Eigen/src/Core/DenseStorage.h:44:
+Eigen::internal::matrix_array<T, Size, MatrixOptions, Align>::internal::matrix_array()
+[with T = double, int Size = 2, int MatrixOptions = 2, bool Align = true]:
+Assertion `(reinterpret_cast<size_t>(array) & (sizemask)) == 0 && "this assertion
+is explained here: http://eigen.tuxfamily.org/dox-devel/group__TopicUnalignedArrayAssert.html
+     READ THIS WEB PAGE !!! ****"' failed.
+```
+
+此问题有 4 个已知原因。如果只能使用最新的编译器（例如，GCC>=7、clang>=5、MSVC>=19.12）来定位 [c++17]，那么启用 c++17 就足够了（如果行不通，可以在 [这里](https://eigen.tuxfamily.org/bz/) 给Eigen官方提Bug）。另外，请继续阅读以了解这些问题，以及如何解决它们。
+
+
+
+#### 如何在自己的代码中查找原因
+
+首先，需要找出自己的代码中触发此断言的位置，乍一看，错误消息看起来没什么用，因为它指向的是 Eigen 中的一个文件。然而，由于程序崩溃了，如果可以复现崩溃，则可以使用任何调试器进行回溯。例如，如果使用的是 `GCC`，则可以按如下方式使用 GDB 调试器：
+
+```bash
+$ gdb ./my_program          # Start GDB on your program
+> run                       # Start running your program
+...                         # Now reproduce the crash!
+> bt                        # Obtain the backtrace
+```
+
+现在已经准确地知道问题发生在自己的代码中的什么位置，请继续阅读以了解需要更改的内容。
 
 
 
@@ -3577,8 +3610,33 @@ In memory (row-major):
 
 
 
+#### 3.13.2 固定大小的可向量化Eigen对象
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicFixedSizeVectorizable.html)
 
 
+
+#### 3.13.3 包含Eigen成员的结构体
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicStructHavingEigenMembers.html)
+
+
+
+#### 3.13.4 将STL容器与Eigen一起使用
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicStlContainers.html)
+
+
+
+#### 3.13.5 按值将Eigen对象传递给函数
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicPassingByValue.html)
+
+
+
+#### 3.13.6 编译器对堆栈对齐做出了错误的假设
+
+[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicWrongStackAlignment.html)
 
 
 
