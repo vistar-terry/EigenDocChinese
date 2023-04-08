@@ -51,7 +51,7 @@
 
 这是一个非常简单的程序。
 
-```c++
+```cpp
 // 代码索引 2-1-1-1
 #include <iostream>
 #include <Eigen/Dense>
@@ -94,7 +94,7 @@ g++ my_program.cpp -o my_program
 
 ## 第一个程序的解释
 
-```c++
+```cpp
 // 代码索引 2-1-1-1
 #include <iostream>
 #include <Eigen/Dense>
@@ -126,7 +126,7 @@ Eigen头文件定义了很多类型，但对于简单的应用程序，仅使用
 
 版本一：
 
-```c++
+```cpp
 // 代码索引 2-1-2-1
 #include <iostream>
 #include <Eigen/Dense>
@@ -147,7 +147,7 @@ int main()
 
 版本二：
 
-```c++
+```cpp
 // 代码索引 2-1-3-1
 #include <iostream>
 #include <Eigen/Dense>
@@ -211,7 +211,7 @@ $$
 
 在Eigen中，所有矩阵和向量都是[Matrix](http://eigen.tuxfamily.org/dox/classEigen_1_1Matrix.html)模板类的对象。向量只是行数或者列数为`1`的特殊矩阵。
 
-```c++
+```cpp
 template<typename Scalar_, int Rows_, int Cols_, int Options_, int MaxRows_, int MaxCols_>
 class Eigen::Matrix< Scalar_, Rows_, Cols_, Options_, MaxRows_, MaxCols_ >
 ```
@@ -222,7 +222,7 @@ Matrix类有`6`个模板参数，但现在了解前3个参数就足够了，剩�
 
 Matrix类3个强制模板参数是：
 
-```C++
+```cpp
 Matrix<typename Scalar, int RowsAtCompileTime, int ColsAtCompileTime>
 ```
 
@@ -231,7 +231,7 @@ Matrix<typename Scalar, int RowsAtCompileTime, int ColsAtCompileTime>
 
 我们提供了很多常用的类型。例如，`Matrix4f`是`4*4`的`float`矩阵，这在Eigen中定义为：
 
-```C++
+```cpp
 typedef Matrix<float, 4, 4> Matrix4f;
 ```
 
@@ -243,13 +243,13 @@ typedef Matrix<float, 4, 4> Matrix4f;
 
 例如，`Vector3f`是有3个`float`元素的列向量。在Eigen中这样定义：
 
-```c++
+```cpp
 typedef Matrix<float, 3, 1> Vector3f;
 ```
 
 也提供了行向量的类型定义，如下表示有2个`int`元素的行向量：
 
-```c++
+```cpp
 typedef Matrix<int, 1, 2> RowVector2i;
 ```
 
@@ -257,19 +257,19 @@ typedef Matrix<int, 1, 2> RowVector2i;
 
 当然，Eigen不局限于处理编译时维度已知的矩阵。模板参数`RowsAtCompileTime`和`ColsAtCompileTime`可以是一个动态值，这表明在编译时矩阵大小是未知的，必须当作运行时的变量进行处理。在Eigen的术语中，这叫做动态大小；在编译期间就知道大小叫做固定大小。例如，`MatrixXd`是`double`类型的动态大小矩阵，定义如下：
 
-```C++
+```cpp
 typedef Matrix<double, Dynamic, Dynamic> MatrixXd;
 ```
 
 类似的，定义`int`类型的动态大小向量`VectorXi`如下：
 
-```c++
+```cpp
 typedef Matrix<int, Dynamic, 1> VectorXi;
 ```
 
 也可以定义一个固定行数和一个动态列数的矩阵，如下：
 
-```c++
+```cpp
 Matrix<float, 3, Dynamic>
 ```
 
@@ -277,7 +277,7 @@ Matrix<float, 3, Dynamic>
 
 默认的构造函数始终可用，它不执行任何动态内存分配，也不初始化矩阵元素。例如：
 
-```c++
+```cpp
 Matrix3f a;
 MatrixXf b;
 ```
@@ -288,7 +288,7 @@ MatrixXf b;
 
 也有指定大小的构造函数。对于矩阵来说，第一个参数总是行，第二个参数是列，对于向量来说，只需要传入向量的大小即可。构造函数按照给定的大小开辟内存，但不会初始化内存。
 
-```C++
+```cpp
 MatrixXf a(10,15);
 VectorXf b(30);
 ```
@@ -298,7 +298,7 @@ VectorXf b(30);
 
 为了提供动态大小和固定大小矩阵统一的API，可以向固定大小矩阵的构造函数传递大小，虽然这是无效的，但是合法的：
 
-```C++
+```cpp
 Matrix3f a(3,3);
 ```
 
@@ -308,7 +308,7 @@ Matrix3f a(3,3);
 
 矩阵和向量也可以从列表初始化。在C++11之前，此功能仅限于固定大小且不超过 `4` 的向量，如：
 
-```C++
+```cpp
 Vector2d a(5.0, 6.0);
 Vector3d b(5.0, 6.0, 7.0);
 Vector4d c(5.0, 6.0, 7.0, 8.0);
@@ -316,7 +316,7 @@ Vector4d c(5.0, 6.0, 7.0, 8.0);
 
 如果使用C++11编译，则可以通过列表来初始化任意固定大小的列或行向量，如：
 
-```C++
+```cpp
 Vector2i a(1, 2);                      // 包含 {1, 2} 的列向量
 Matrix<int, 5, 1> b {1, 2, 3, 4, 5};   // 包含 {1, 2, 3, 4, 5} 的行向量
 Matrix<int, 1, 5> c = {1, 2, 3, 4, 5}; // 包含 {1, 2, 3, 4, 5} 的列向量
@@ -324,7 +324,7 @@ Matrix<int, 1, 5> c = {1, 2, 3, 4, 5}; // 包含 {1, 2, 3, 4, 5} 的列向量
 
 初始化固定大小或者运行时大小固定的矩阵和向量时，必须将元素按照行进行分组，编译器会使用该分组一行一行的初始化矩阵，如下：
 
-```C++
+```cpp
 MatrixXi a {      // 构造一个 2*2 的矩阵
       {1, 2},     // 第一行
       {3, 4}      // 第二行
@@ -337,7 +337,7 @@ Matrix<double, 2, 3> b { // 构造一个 2*3 的矩阵
 
 对于列或者行向量，允许隐式的转置。这意味着可以使用一个行分组对一个列向量初始化。
 
-```C++
+```cpp
 VectorXd a {{1.5, 2.5, 3.5}};             // 包含3个元素的列向量，行向量隐式转换成列向量
 RowVectorXd b {{1.0, 2.0, 3.0, 4.0}};     // 包含4个元素的行向量，本来就是行向量
 ```
@@ -346,7 +346,7 @@ RowVectorXd b {{1.0, 2.0, 3.0, 4.0}};     // 包含4个元素的行向量，本�
 
 在Eigen中主要的元素访问与修改方法是重载括号运算符。对于矩阵，行索引总是优先传递的。对于向量，只需要传递一个索引，索引从0开始。如下：
 
-```C++
+```cpp
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -384,7 +384,7 @@ Here is the vector v:
 
 可以使用所谓的`逗号初始化`语法初始化矩阵和向量。如下：
 
-```C++
+```cpp
 Matrix3f m;
 m << 1, 2, 3,
      4, 5, 6,
@@ -404,7 +404,7 @@ std::cout << m;
 
 矩阵的当前大小可以通过 [rows()](https://eigen.tuxfamily.org/dox/structEigen_1_1EigenBase.html#ac22eb0695d00edd7d4a3b2d0a98b81c2)、[cols()](https://eigen.tuxfamily.org/dox/structEigen_1_1EigenBase.html#a2d768a9877f5f69f49432d447b552bfe) 和 [size()](https://eigen.tuxfamily.org/dox/structEigen_1_1EigenBase.html#ae106171b6fefd3f7af108a8283de36c9) 来检索。这些方法分别返回行数、列数和元素个数。调整动态大小矩阵的大小可以使用 [resize()](https://eigen.tuxfamily.org/dox/classEigen_1_1PlainObjectBase.html#a9fd0703bd7bfe89d6dc80e2ce87c312a) 方法。
 
-```C++
+```cpp
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -436,7 +436,7 @@ As a matrix, v is of size 5x1
 
 > 这里进一步解释一下，如果矩阵的大小没有改变， `resize()` 不执行内存分配并且保持矩阵元素值不变，如果矩阵的大小改变了（行数、列数、元素数至少任意一个改变）  ，数据被重新分配并且丢失矩阵所有值初始化为0，如下：
 >
-> ```c++
+> ```cpp
 > #include <iostream>
 > #include <Eigen/Dense>
 >  
@@ -465,7 +465,7 @@ As a matrix, v is of size 5x1
 
 为了 API 统一，所有这些方法在固定大小的矩阵上仍然可用。当然，实际上无法调整固定大小的矩阵。尝试将固定大小更改为实际不同的值将触发断言失败，但代码在语法上是合法的，如下：
 
-```C++
+```cpp
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -488,7 +488,7 @@ The matrix m is of size 4x4
 
 赋值是使用操作符 `=` 将一个矩阵复制到另一个矩阵的操作。Eigen会自动调整 `=` 左边的矩阵大小以便与和 `=` 右边的矩阵大小相匹配，例如：
 
-```C++
+```cpp
 MatrixXf a(2,2);
 std::cout << "a is of size " << a.rows() << "x" << a.cols() << std::endl;
 MatrixXf b(3,3);
@@ -535,7 +535,7 @@ a is now of size 3x3
 
 在开始的时候，我们提及`Matrix`类有6个模板参数，但是，目前只讨论了前三个，剩下的三个参数是可供选择的。下面是完整的模板参数：
 
-```C++
+```cpp
 Matrix<typename Scalar,
        int RowsAtCompileTime,
        int ColsAtCompileTime,
@@ -994,17 +994,17 @@ v = m * v; // Run-time assertion failure here: "invalid matrix product"
 
 
 
-## 3.3 数组类与元素操作
+## 3.3 Array类与元素操作
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialArrayClass.html)
 
 本页旨在提供有关如何使用[Eigen](http://eigen.tuxfamily.org/dox/namespaceEigen.html)的[Array](http://eigen.tuxfamily.org/dox/classEigen_1_1Array.html)类的概述和说明。
 
-### 什么是数组类？
+### 什么是Array类？
 
 与`Matrix`类用于线性代数计算不同的是，`Array`类提供了通用目的数组。此外，[Array](http://eigen.tuxfamily.org/dox/classEigen_1_1Array.html)类提供了一种执行按系数运算的简单方法，这可能没有线性代数意义，例如对每一个元素都加一个常数或按系数将两个数组相乘。
 
-### 数组类型
+### Array类型
 
 `Array`是一个类模板，采用与`Matrix`相同的模板参数。与`Matrix`一样，前三个模板参数是必需的：
 
@@ -1025,7 +1025,7 @@ Eigen还提供了一些常见的类型定义，其方式类似于`Matrix`类型�
 
 
 
-### 访问数组中的值
+### 访问Array中的值
 
 就像矩阵一样，使用括号运算符可以访问数组中的值。另外，`<<`运算符可用于初始化数组（使用逗号初始化）或打印它们。
 
@@ -1116,7 +1116,7 @@ a - 2 =
 
 
 
-### 数组乘法
+### Array乘法
 
 当然你可以将一个数组乘以一个标量，这与矩阵相同。数组与矩阵不同的地方在于自身相乘，矩阵将乘法解释为矩阵乘积，而数组将乘法解释为系数乘积。因此，两个数组相乘时它们必须具有相同的维度。
 
@@ -3542,6 +3542,21 @@ In memory (row-major):
 
 
 
+### Eigen中的存储顺序
+
+可以通过为 `Matrix` 或 `Array` 指定 `Options` 模板参数来设置矩阵或二维数组的存储顺序。`Matrix` 类模板有六个模板参数，其中三个是必需的（`Scalar`、`RowsAtCompileTime` 和 `ColsAtCompileTime`），三个是可选的（`Options`、`MaxRowsAtCompileTime` 和 `MaxColsAtCompileTime`）。如果 `Options` 参数设置为 `RowMajor`，则矩阵或数组以行优先顺序存储；如果设置为 `ColMajor`，则以列优先顺序存储。上述Eigen程序中使用了这种机制来指定存储顺序。
+
+如果未指定存储顺序，则 Eigen 默认以列优先顺序存储。使用一种存储顺序的矩阵和数组可以分配给使用另一种存储顺序的矩阵和数组，就像上面程序中使用矩阵 `Acolmajor` 初始化矩阵 `Arowmajor` 那样，Eigen 将自动重新排序元素。更一般地，行优先和列优先矩阵可以根据需要混合在一个表达式中。
+
+
+
+### 选择哪种存储顺序？
+
+那么，应该在程序中使用哪种存储顺序？这个问题没有统一的答案，这取决于应用程序。有以下几点请注意：
+
+- 编程时可能需要特定的存储顺序，或使用第三方库时，该库需要特定的存储顺序，这时使用该存储顺序是最好的选择。
+- 由于更好的数据局部性，当矩阵以行优先顺序存储时，逐行遍历矩阵的算法将运行得更快。同样，列优先矩阵的逐列遍历速度更快。
+- Eigen 中的默认值是列优先的。自然地，Eigen 库的大部分开发和测试都是通过列优先矩阵完成的。这意味着，尽管我们的目标是自由选择列优先或行优先存储顺序，但 Eigen 库可能最适合列优先矩阵。
 
 
 
@@ -3550,7 +3565,6 @@ In memory (row-major):
 
 
 
-# 四、扩展/自定义Eigen
 
 
 
@@ -3560,5 +3574,55 @@ In memory (row-major):
 
 
 
-# 五、常见话题
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 四、稠密线性问题与分解
+
+
+
+# 五、稀疏线性代数
+
+
+
+# 六、几何学
+
+
+
+
+
+# 七、扩展/自定义Eigen
+
+
+
+
+
+# 八、常见话题
 
