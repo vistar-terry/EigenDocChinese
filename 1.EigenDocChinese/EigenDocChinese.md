@@ -3592,7 +3592,124 @@ $ gdb ./my_program          # Start GDB on your program
 > bt                        # Obtain the backtrace
 ```
 
-现在已经准确地知道问题发生在自己的代码中的什么位置，请继续阅读以了解需要更改的内容。
+现在已经准确地知道问题发生在自己代码中的什么位置，请继续阅读以了解需要更改的内容。
+
+
+
+#### 原因 1：包含Eigen对象的结构体
+
+如果有类似如下代码：
+
+```cpp
+class Foo
+{
+  //...
+  Eigen::Vector4d v;
+  //...
+};
+//...
+Foo *foo = new Foo;
+```
+
+那么需要阅读这篇文章：[包含Eigen对象的结构体](#3.13.3 包含Eigen对象的结构体)。
+
+请注意，此处 `Eigen::Vector4d` 仅用作示例，更一般的是，所有 [固定大小的可向量化 `Eigen` 对象](#3.13.2 固定大小的可向量化Eigen对象) 都会出现此问题。
+
+
+
+#### 原因 2：STL 容器或手动内存分配
+
+如果将 STL 容器（例如 std::vector、std::map、...）与 Eigen 对象或包含 Eigen 对象的类一起使用，就像这样：
+
+```cpp
+std::vector<Eigen::Matrix2d> my_vector;
+struct my_class { ... Eigen::Matrix2d m; ... };
+std::map<int, my_class> my_map;
+```
+
+那么需要阅读这篇文章：[将STL容器与Eigen一起使用](#3.13.4 将STL容器与Eigen一起使用)。
+
+请注意，此处 `Eigen::Matrix2d` 仅用作示例，更一般地，所有 [固定大小的可向量化 `Eigen` 对象](#3.13.2 固定大小的可向量化Eigen对象) 和 [包含Eigen对象的结构体](#3.13.3 包含Eigen对象的结构体) 都会出现此问题。
+
+任何绕过 `operator new` 来分配内存的类/函数都会出现同样的问题，即先执行自定义内存分配再调用 `placement new` 运算符。例如，`std::make_shared` 或 `std::allocate_shared` 的情况，通常是使用 [aligned allocator](http://eigen.tuxfamily.org/dox/classEigen_1_1aligned__allocator.html) ，如 [将STL容器与Eigen一起使用](#3.13.4 将STL容器与Eigen一起使用) 中所述。
+
+
+
+#### 原因 3：按值传递 Eigen 对象
+
+如果代码中的某个函数正在获取按值传递的 Eigen 对象，就像这样：
+
+```cpp
+void func(Eigen::Vector4d v);
+```
+
+那么需要阅读这篇文章：[按值将Eigen对象传递给函数](#3.13.5 按值将Eigen对象传递给函数)。
+
+请注意，此处 `Eigen::Vector4d` 仅用作示例，更一般的，所有 [固定大小的可向量化 `Eigen` 对象](#3.13.2 固定大小的可向量化Eigen对象) 都会出现此问题。
+
+
+
+#### 原因 4：编译器对堆栈对齐做出了错误的假设（例如 Windows 上的 GCC）
+
+对于在 Windows 上使用 GCC（如 MinGW 或 TDM-GCC）的人来说，这是必读的。如果在声明局部变量的函数中遇到此断言失败，如下所示：
+
+```cpp
+void foo()
+{
+  Eigen::Quaternionf q;
+  //...
+}
+```
+
+那么需要阅读这篇文章：[编译器对堆栈对齐做出了错误的假设](#3.13.6 编译器对堆栈对齐做出了错误的假设)。
+
+请注意，此处 `Eigen::Quaternionf` 仅用作示例，更一般的，所有 [固定大小的可向量化 `Eigen` 对象](#3.13.2 固定大小的可向量化Eigen对象) 都会出现此问题。
+
+
+
+#### 这个断言的一般解释
+
+ [固定大小的可向量化 `Eigen` 对象](#3.13.2 固定大小的可向量化Eigen对象) 必须在正确对齐的位置创建，否则寻址它们的 SIMD 指令将崩溃。例如，`SSE/NEON/MSA/Altivec/VSX` 目标需要 16 字节对齐，而 `AVX` 和 `AVX512` 目标可能分别需要多达 `32` 字节和 `64` 字节对齐。
+
+Eigen 通常会自动处理这些对齐问题，即为它们设置对齐属性并重载它们的 `operator new`。
+
+然而，在一些极端情况下，这些对齐设置会被覆盖：这是是导致此断言的可能原因。
+
+
+
+#### 如果不关心最佳矢量化，该如何处理？
+
+有3种可能性：
+
+- 对 `Matrix`、`Array`、`Quaternion`等对象使用 `DontAlign` 选项。这样 Eigen 就不会试图过度对齐它们，也不会假定任何特殊的对齐方式。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3616,7 +3733,7 @@ $ gdb ./my_program          # Start GDB on your program
 
 
 
-#### 3.13.3 包含Eigen成员的结构体
+#### 3.13.3 包含Eigen对象的结构体
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicStructHavingEigenMembers.html)
 
