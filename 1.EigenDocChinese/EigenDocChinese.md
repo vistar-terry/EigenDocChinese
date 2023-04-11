@@ -2,7 +2,7 @@
 
 # 一、概述
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/index.html)
+[英文原文](http://eigen.tuxfamily.org/dox/index.html)
 
 这是Eigen3的API文档，你可以[下载](http://eigen.tuxfamily.org/dox/eigen-doc.tgz)它以便于离线阅读。
 
@@ -35,7 +35,7 @@
 
 # 二、入门
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/GettingStarted.html)
+[英文原文(Getting started)](http://eigen.tuxfamily.org/dox/GettingStarted.html)
 
 这是一个非常简短的Eigen入门文章。该文章有两层目的。对于想要尽快开始编码的人来说，该文章是对[Eigen](http://eigen.tuxfamily.org/dox/namespaceEigen.html)库的最简单介绍。你可以把该文章作为教程的第一部分，这更加详细的解释了Eigen库。看完这个教程后可以继续阅读 [The Matrix class](http://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html) 教程。
 
@@ -207,7 +207,7 @@ $$
 
 ## 3.1 Matrix类
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html)
+[英文原文(The Matrix class)](http://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html)
 
 在Eigen中，所有矩阵和向量都是[Matrix](http://eigen.tuxfamily.org/dox/classEigen_1_1Matrix.html)模板类的对象。向量只是行数或者列数为`1`的特殊矩阵。
 
@@ -588,7 +588,7 @@ Matrix<typename Scalar,
 
 代码示例：
 
-```c++
+```cpp
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -613,7 +613,7 @@ int main()
 
 输出：
 
-```c++
+```
 a + b =
 3 5
 4 8
@@ -644,7 +644,7 @@ Now a =
 
 代码示例：
 
-```c++
+```cpp
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -683,7 +683,7 @@ Now v =
 
 这是一个比较高级的话题，但在这里提出是比较有用的。在Eigen中，诸如`+`之类的算术运算符，他们自己不执行任何操作，只是返回一个表达式对象，该对象描述了将要执行的计算操作。实际的计算发生在后面整个表达式被求值的时侯，比如使用`=`运算符时。虽然这听起来很繁琐，但任何现代优化编译器都能优化掉这种抽象，从而得到完美优化代码。例如：
 
-```c++
+```cpp
 VectorXf a(50), b(50), c(50), d(50);
 ...
 a = 3*b + 4*c + 5*d;
@@ -691,7 +691,7 @@ a = 3*b + 4*c + 5*d;
 
 Eigen会把上述表达式编译成一个循环，这个数组只遍历一次。数组循环如下所示：
 
-```C++
+```cpp
 for(int i = 0; i < 50; ++i)
   a[i] = 3*b[i] + 4*c[i] + 5*d[i];
 ```
@@ -704,7 +704,7 @@ for(int i = 0; i < 50; ++i)
 
 示例如下：
 
-```c++
+```cpp
 MatrixXcf a = MatrixXcf::Random(2,2);
 cout << "Here is the matrix a\n" << a << endl;
 
@@ -717,7 +717,7 @@ cout << "Here is the matrix a^*\n" << a.adjoint() << endl;
 
 输出如下：
 
-```c++
+```
 Here is the matrix a
  (-0.211,0.68) (-0.605,0.823)
  (0.597,0.566)  (0.536,-0.33)
@@ -738,7 +738,7 @@ Here is the matrix a^*
 
 示例如下：
 
-```c++
+```cpp
 Matrix2i a; a << 1, 2, 3, 4;
 cout << "Here is the matrix a:\n" << a << endl;
  
@@ -748,7 +748,7 @@ cout << "and the result of the aliasing effect:\n" << a << endl;
 
 输出为：
 
-```c++
+```
 Here is the matrix a:
 1 2
 3 4
@@ -763,7 +763,7 @@ and the result of the aliasing effect:
 
 示例如下：
 
-```c++
+```cpp
 MatrixXf a(2,3); a << 1, 2, 3, 4, 5, 6;
 cout << "Here is the initial matrix a:\n" << a << endl;
 
@@ -773,7 +773,7 @@ cout << "and after being transposed:\n" << a << endl;
 
 输出为：
 
-```c++
+```
 Here is the initial matrix a:
 1 2 3
 4 5 6
@@ -796,7 +796,7 @@ and after being transposed:
 
 示例如下：
 
-```c++
+```cpp
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -841,14 +841,14 @@ Now mat is mat:
 
 注意：如果你阅读过上面的关于表达式模板的段落并且担心 `m = m * m` 会引发混淆问题，这里请放心，Eigen把矩阵乘法作为一个特殊的例子，并在此引入了一个临时变量，所以它会编译为：
 
-```c++
+```cpp
 tmp = m*m;
 m = tmp;
 ```
 
 如果你知道你的矩阵乘法可以安全的计算并且没有混淆问题，那么你可以使用`noalias()`函数来避免编译临时变量，例如：
 
-```C++
+```cpp
 c.noalias() += a * b;
 ```
 
@@ -862,7 +862,7 @@ c.noalias() += a * b;
 
 示例如下：
 
-```c++
+```cpp
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -899,7 +899,7 @@ Eigen还提供了一些简单操作来将给定的矩阵或向量计算为标量
 
 示例如下：
 
-```c++
+```cpp
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -920,7 +920,7 @@ int main()
 
 输出为：
 
-```c++
+```
 Here is mat.sum():       10
 Here is mat.prod():      24
 Here is mat.mean():      2.5
@@ -933,7 +933,7 @@ Here is mat.trace():     5
 
 也存在`minCoeff`和`maxCoeff`函数的变体，通过参数返回相应系数的坐标：
 
-```c++
+```cpp
   Matrix3f m = Matrix3f::Random();
   std::ptrdiff_t i, j;
   float minOfM = m.minCoeff(&i,&j);
@@ -950,7 +950,7 @@ Here is mat.trace():     5
 
 输出为：
 
-```c++ 
+```
 Here is the matrix m:
   0.68  0.597  -0.33
 -0.211  0.823  0.536
@@ -978,7 +978,7 @@ Its maximum coefficient (3) is at position 2
 
 Eigen会检查操作的有效性，如果有错误，它会在编译的时候产生错误提示。这些错误提示可能又长又难看，但Eigen会把重要的信息写成大写，以使其更加显眼，例如：
 
-```c++
+```cpp
 Matrix3f m;
 Vector4f v;
 v = m*v;      // Compile-time error: YOU_MIXED_MATRICES_OF_DIFFERENT_SIZES
@@ -986,7 +986,7 @@ v = m*v;      // Compile-time error: YOU_MIXED_MATRICES_OF_DIFFERENT_SIZES
 
 当然，在很多情况下，如检查动态矩阵的大小时，无法在编译时进行检查，Eigen会使用运行时的断言。这意味如果程序在debug模式下运行，遇到非法操作时会终止运行并打印出错误信息。如果关闭断言，程序可能会崩溃。
 
-```c++
+```cpp
 MatrixXf m(3,3);
 VectorXf v(4);
 v = m * v; // Run-time assertion failure here: "invalid matrix product"
@@ -3699,63 +3699,31 @@ Eigen 通常会自动处理这些对齐问题，即为它们设置对齐属性�
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#### 3.13.2 固定大小的可向量化Eigen对象
+### 3.13.2 固定大小的可向量化Eigen对象
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicFixedSizeVectorizable.html)
 
 
 
-#### 3.13.3 包含Eigen对象的结构体
+### 3.13.3 包含Eigen对象的结构体
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicStructHavingEigenMembers.html)
 
 
 
-#### 3.13.4 将STL容器与Eigen一起使用
+### 3.13.4 将STL容器与Eigen一起使用
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicStlContainers.html)
 
 
 
-#### 3.13.5 按值将Eigen对象传递给函数
+### 3.13.5 按值将Eigen对象传递给函数
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicPassingByValue.html)
 
 
 
-#### 3.13.6 编译器对堆栈对齐做出了错误的假设
+### 3.13.6 编译器对堆栈对齐做出了错误的假设
 
 [英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicWrongStackAlignment.html)
 
