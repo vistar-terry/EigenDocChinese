@@ -996,7 +996,7 @@ v = m * v; // Run-time assertion failure here: "invalid matrix product"
 
 ## 3.3 Array类与元素操作
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialArrayClass.html)
+[英文原文(The Array class and coefficient-wise operations)](http://eigen.tuxfamily.org/dox/group__TutorialArrayClass.html)
 
 本页旨在提供有关如何使用[Eigen](http://eigen.tuxfamily.org/dox/namespaceEigen.html)的[Array](http://eigen.tuxfamily.org/dox/classEigen_1_1Array.html)类的概述和说明。
 
@@ -1008,7 +1008,7 @@ v = m * v; // Run-time assertion failure here: "invalid matrix product"
 
 `Array`是一个类模板，采用与`Matrix`相同的模板参数。与`Matrix`一样，前三个模板参数是必需的：
 
-```c++
+```cpp
 Array<typename Scalar, int RowsAtCompileTime, int ColsAtCompileTime>
 ```
 
@@ -1031,7 +1031,7 @@ Eigen还提供了一些常见的类型定义，其方式类似于`Matrix`类型�
 
 例如：
 
-```c++
+```cpp
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1057,7 +1057,7 @@ int main()
 
 输出如下：
 
-```c++
+```
 1 2
 3 5
 
@@ -1077,7 +1077,7 @@ int main()
 
 示例如下：
 
-```c++
+```cpp
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1102,7 +1102,7 @@ int main()
 
 输出如下：
 
-```c++
+```
 a + b = 
  2  4  6
  5  7  9
@@ -1122,7 +1122,7 @@ a - 2 =
 
 示例如下：
 
-```c++
+```cpp
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1140,7 +1140,7 @@ int main()
 
 输出如下：
 
-```c++
+```
 a * b = 
  5 12
 21 32
@@ -1152,7 +1152,7 @@ a * b =
 
 除了上述的加法、减法和乘法运算符之外，`Array` 类还定义了其他按系数计算的运算。例如，`abs()` 方法对每个元素取绝对值，而`sqrt()`计算每个系数的平方根。如果你有两个相同大小的数组，你可以调用`min(.)`来构造一个数组，其元素是两个给定数组对应元素的最小值。这些操作在以下示例中进行了说明：
 
-```c++
+```cpp
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1173,7 +1173,7 @@ int main()
 
 输出如下：
 
-```c++
+```
 a =
   1.36
 -0.422
@@ -1218,7 +1218,7 @@ Eigen 禁止在表达式中混合使用`Matrix` 和`Array`。例如，不能将`
 
 示例如下：
 
-```c++
+```cpp
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1248,7 +1248,7 @@ int main()
 
 输出如下：
 
-```c++
+```
 -- Matrix m*n: --
 19 22
 43 50
@@ -1274,7 +1274,7 @@ int main()
 
 示例如下：
 
-```c++
+```cpp
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -3701,7 +3701,71 @@ Eigen 通常会自动处理这些对齐问题，即为它们设置对齐属性�
 
 ### 3.13.2 固定大小的可向量化Eigen对象
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicFixedSizeVectorizable.html)
+[英文原文(Fixed-size vectorizable Eigen objects)](http://eigen.tuxfamily.org/dox/group__TopicFixedSizeVectorizable.html)
+
+本文主要解释 `固定大小可向量化` 的含义。
+
+
+
+#### 摘要
+
+如果 `Eigen` 对象具有固定大小且该大小是 16 字节的倍数，则称为 `固定大小可向量化`。
+
+例如：
+
+- [Eigen::Vector2d](http://eigen.tuxfamily.org/dox/group__matrixtypedefs.html#ga6c206cbf6f8f3b74bc63ecd362fc2ad6)
+- [Eigen::Vector4d](http://eigen.tuxfamily.org/dox/group__matrixtypedefs.html#ga9b2fcb53776a2829871f8a49009bef0b)
+- [Eigen::Vector4f](http://eigen.tuxfamily.org/dox/group__matrixtypedefs.html#gae6a8e578d2848cc75f573c15a73bd9b4)
+- [Eigen::Matrix2d](http://eigen.tuxfamily.org/dox/group__matrixtypedefs.html#ga3b934095f8a2834e6cc27267427239d3)
+- [Eigen::Matrix2f](http://eigen.tuxfamily.org/dox/group__matrixtypedefs.html#ga36b8989b6aa63020139fc36bae6979e0)
+- [Eigen::Matrix4d](http://eigen.tuxfamily.org/dox/group__matrixtypedefs.html#ga31c5fac458c04196a36b36b5e51127ff)
+- [Eigen::Matrix4f](http://eigen.tuxfamily.org/dox/group__matrixtypedefs.html#ga3a5de8dfef28d29aed525611e15a37e3)
+- Eigen::Affine3d
+- Eigen::Affine3f
+- [Eigen::Quaterniond](http://eigen.tuxfamily.org/dox/group__Geometry__Module.html#ga5daab8e66aa480465000308455578830)
+- [Eigen::Quaternionf](http://eigen.tuxfamily.org/dox/group__Geometry__Module.html#ga66aa915a26d698c60ed206818c3e4c9b)
+
+
+
+#### 解释
+
+首先，`固定大小` ：如果 Eigen 对象的行数和列数在编译时固定，则它具有固定大小。因此，例如 `Matrix3f` 具有固定大小，但 `MatrixXf` 没有（与固定大小相对应的是动态大小）。
+
+固定大小的 Eigen 数组是一个普通的 `静态数组`，它不是动态分配的。例如，`Matrix4f` 背后的数据只是一个 `float array[16]`。
+
+固定大小的对象通常非常小，这意味着，无论是在内存使用还是速度方面，我们都希望以零运行时开销来处理它们。
+
+矢量化适用于 128 位数据包（例如 SSE、AltiVec、NEON）、256 位数据包（例如 AVX）或 512 位数据包（例如 AVX512）。此外，出于性能原因，如果这些数据包与数据包大小具有相同的对齐方式，即分别为 16 字节、32 字节和 64 字节，则读取和写入这些数据包的效率最高。
+
+所以，固定大小的 Eigen 对象矢量化的最佳方式是，如果它们的大小是 16 字节（或更多）的倍数。则Eigen 将为这些对象请求 16 字节对齐（或更多），并从此依赖这些对齐对象来实现最大效率。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
