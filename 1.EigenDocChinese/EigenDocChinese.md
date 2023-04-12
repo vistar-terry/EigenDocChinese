@@ -3741,37 +3741,119 @@ Eigen 通常会自动处理这些对齐问题，即为它们设置对齐属性�
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### 3.13.3 包含Eigen对象的结构体
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicStructHavingEigenMembers.html)
+[英文原文(Structures Having Eigen Members)](http://eigen.tuxfamily.org/dox/group__TopicStructHavingEigenMembers.html)
+
+
+
+#### 摘要
+
+如果定义的结构体包含固定大小的可向量化 Eigen 类型成员，则必须确保对其调用 `operator new` 来分配正确的对齐缓冲区。如果仅使用足够新的编译器（例如，GCC>=7、clang>=5、MSVC>=19.12）以 [c++17] 模式编译，那么编译器会自动处理所有事情，可以跳过本节。
+
+否则，必须重载它的 `operator new` 以便它生成正确对齐的指针（例如，Vector4d 和 AVX 的 32 字节对齐）。幸运的是，Eigen 为提供了一个宏 `EIGEN_MAKE_ALIGNED_OPERATOR_NEW` 来完成这项工作。
+
+
+
+#### 需要修改什么样的代码？
+
+需要更改的代码类型如下：
+
+```cpp
+class Foo
+{
+  ...
+  Eigen::Vector2d v;
+  ...
+};
+ 
+...
+ 
+Foo *foo = new Foo;
+```
+
+即如果有一个类，该类的成员是一个固定大小的可向量化 Eigen 对象，则需要动态创建该类的对象。
+
+
+
+#### 这样的代码应该如何修改？
+
+只需要将 `EIGEN_MAKE_ALIGNED_OPERATOR_NEW` 宏放在类的公共部分，如下所示：
+
+```cpp
+class Foo
+{
+  ...
+  Eigen::Vector4d v;
+  ...
+public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+ 
+...
+ 
+Foo *foo = new Foo;
+```
+
+这个宏使 new Foo 返回一个对齐的指针。在 [c++17] 中，这个宏是空的，因为编译器会自动处理所有事情。
+
+如果此方法过于麻烦，另请参阅其他解决方案，见下文。
+
+
+
+#### 为什么需要这样修改？
+
+假设有如下代码：
+
+```cpp
+class Foo
+{
+  ...
+  Eigen::Vector4d v;
+  ...
+};
+ 
+...
+ 
+Foo *foo = new Foo;
+```
+
+一个 `Eigen::Vector4d` 由 4 个双精度数组成，即 256 位。这正好是 AVX 寄存器的大小，这使得可以使用 AVX 对该向量进行各种操作。但是 AVX 指令（至少是 Eigen 使用的指令速度很快）需要 256 位对齐，否则会出现段错误。
+
+出于这个原因，Eigen 通过以下两点要求 `Eigen::Vector4d` 进行 256 位对齐：
+
+- Eigen 通过 `alignas` 关键字要求 `Eigen::Vector4d` 的数组（4 个双精度数）进行 256 位对齐。
+- Eigen 重载了 `Eigen::Vector4d` 的 `operator new`，因此它将始终返回 256 位对齐的指针。 （在 [c++17] 中删除）
+
+通常情况下，Eigen 会处理 `operator new` 的对齐，但当有一个像上面那样的 `Foo` 类，并且像上面那样动态分配一个新的 `Foo` 时，由于 `Foo` 没有对齐的 `operator new`，返回的指针 `foo` 不一定是 256 位对齐的。
+
+成员 `v` 的对齐属性依赖于类 `Foo` 的属性，如果 `foo` 指针没有对齐，那么 `foo->v` 也不会对齐！通常是让类 `Foo` 有一个对齐的 `operator new`，正如我们在上一节中展示的那样。
+
+此解释也适用于需要 16 字节对齐的 `SSE/NEON/MSA/Altivec/VSX `对象，以及需要 64 字节对齐的 `AVX512` 固定大小对象（例如，Eigen::Matrix4d）。
+
+
+
+#### 是否应该把 Eigen 类型的所有成员放在类的开头？
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
