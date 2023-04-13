@@ -3835,9 +3835,19 @@ Foo *foo = new Foo;
 
 #### 是否应该把 Eigen 类型的所有成员放在类的开头？
 
+这不是必需的。由于 Eigen 会自动处理对齐，所以像这样的代码是正常的：
 
+```cpp
+class Foo
+{
+  double x;
+  Eigen::Vector4d v;
+public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+```
 
-
+也就是说，像往常一样，建议对成员进行排序，以便对齐不会浪费内存。在上面的示例中，对于 AVX，编译器必须在 `x` 和 `v` 之间保留 24 个空字节。
 
 
 
