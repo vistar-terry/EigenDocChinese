@@ -1596,7 +1596,7 @@ after 'v.segment(1,4) *= 2', v =
 
 ## 3.5 切片和索引
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialSlicingIndexing.html)
+[英文原文(Slicing and Indexing)](http://eigen.tuxfamily.org/dox/group__TutorialSlicingIndexing.html)
 
 本文介绍了如何使用操作运算符`operator()`索引行和列的子集。该 API 在 Eigen 3.4 中引入。它支持 [block API](http://eigen.tuxfamily.org/dox/group__TutorialBlockOperations.html) 提供的所有功能。特别是，它支持切片，即获取一组行、列或元素，以及等间隔的从矩阵或者数组中提取元素。
 
@@ -1611,7 +1611,7 @@ after 'v.segment(1,4) *= 2', v =
 
 更一般的，该函数可以接受任何有下列两个成员函数接口的对象
 
-```c++
+```cpp
 <integral type> operator[](<integral type>) const;
 <integral type> size() const;
 ```
@@ -1647,7 +1647,7 @@ after 'v.segment(1,4) *= 2', v =
 
 示例如下：
 
-```c++
+```cpp
 // 代码索引 3-5-1-1
 MatrixXi A = MatrixXi::Random(7, 6);
 cout << "Initial matrix A:\n"
@@ -1780,7 +1780,7 @@ Initial vector v:
 
 示例如下：
 
-```c++
+```cpp
 Eigen::VectorXi v{{4,2,5,8,3}};
 cout << "Initial vector v:\n"
      << v << "\n\n";
@@ -1846,19 +1846,19 @@ A的最后n列, 步长为m: (n: 3, m: 2)
 
 在性能方面，Eigen和编译器可以利用编译时的大小和步长。为此，可以使用`Eigen::fix<val>`在编译时强制指定大小。而且，它可以和`Eigen::last`符号一起使用：
 
-```c++
+```cpp
 v(seq(last-fix<7>, last-fix<2>))
 ```
 
 在这个示例中，Eigen在编译时就知道返回的表达式有6个元素。它等价于:
 
-```c++
+```cpp
 v(seqN(last-7, fix<6>))
 ```
 
 我们可以访问A的偶数列，如：
 
-```c++
+```cpp
 A(all, seq(0,last,fix<2>))
 ```
 
@@ -1866,19 +1866,19 @@ A(all, seq(0,last,fix<2>))
 
 也可以把步长设置为负数，按降序枚举行/列索引，例如，从第 20 列开始到第 10 列结束， 步长为`-2`：
 
-```c++
+```cpp
 A(all, seq(20, 10, fix<-2>))
 ```
 
 从最后一行开始，取n行：
 
-```c++
+```cpp
 A(seqN(last, n, fix<-1>), all)
 ```
 
 也可以使用`ArithmeticSequence::reverse() `方法来反转序列，前面的例子也可以写成：
 
-```c++
+```cpp
 A(lastN(n).reverse(), all)
 ```
 
@@ -1888,7 +1888,7 @@ A(lastN(n).reverse(), all)
 
 示例：
 
-```c++
+```cpp
 std::vector<int> ind{4,2,5,5,3};
 MatrixXi A = MatrixXi::Random(4,6);
 cout << "Initial matrix A:\n" << A << "\n\n";
@@ -1914,7 +1914,7 @@ A(all,ind):
 也可以直接传递一个静态数组：
 
 
-```c++
+```cpp
 MatrixXi A = MatrixXi::Random(4,6);
 cout << "Initial matrix A:\n" << A << "\n\n";
 cout << "A(all,{4,2,5,5,3}):\n" << A(Eigen::placeholders::all,{4,2,5,5,3}) << "\n\n";
@@ -1938,7 +1938,7 @@ A(all,{4,2,5,5,3}):
 
 也可以传递一个表达式：
 
-```c++
+```cpp
 ArrayXi ind(5); ind<<4,2,5,5,3;
 MatrixXi A = MatrixXi::Random(4,6);
 cout << "Initial matrix A:\n" << A << "\n\n";
@@ -1967,7 +1967,7 @@ A(all,ind-1):
 
 更一般的，`operator()`可以接受任何类型的对象：
 
-```c++
+```cpp
 Index s = ind.size(); or Index s = size(ind);
 Index i;
 i = ind[i];
@@ -1975,7 +1975,7 @@ i = ind[i];
 
 这意味着可以构建自己的序列生成器并将其传递给operator()。下面是一个通过重复填充额外的第一行和列来扩大给定矩阵的示例：
 
-```c++
+```cpp
 struct pad {
   Index size() const { return out_size; }
   Index operator[] (Index i) const { return std::max<Index>(0,i-(out_size-in_size)); }
@@ -2010,7 +2010,7 @@ A(pad{3,N}, pad{3,N}):
 
 ## 3.6 高级初始化
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialAdvancedInitialization.html)
+[英文原文(Advanced initialization)](http://eigen.tuxfamily.org/dox/group__TutorialAdvancedInitialization.html)
 
 本文介绍了几种用于初始化矩阵的高级方法。提供了有关之前介绍的逗号初始化程序的更多详细信息。还解释了如何获得特殊矩阵，例如单位矩阵和零矩阵。
 
@@ -2020,7 +2020,7 @@ A(pad{3,N}, pad{3,N}):
 
 Eigen提供了一个逗号初始化语法，这让用户可以很容易的设置矩阵、向量、数组的系数。仅仅需要简单的列出系数，从左上角开始，从左到右，从上到下依次列出系数。初始化对象的大小需要提前指定，如果给的系数太多或太少，Eigen会报错，如下：
 
-```c++
+```cpp
 Matrix3f m;
 m << 1, 2, 3,
      4, 5, 6,
@@ -2038,7 +2038,7 @@ std::cout << m;
 
 此外，初始化列表的元素本身可以是向量或者矩阵。逗号就是把向量和矩阵连接起来。例如，下面是在指定向量大小后，连接两个向量（注意，必须先设置大小，然后才能使用逗号初始化）。
 
-```c++
+```cpp
 RowVectorXd vec1(3);
 vec1 << 1, 2, 3;
 std::cout << "vec1 = " << vec1 << std::endl;
@@ -2062,7 +2062,7 @@ joined =  1  2  3  1  4  9 16
 
 也可以使用同样的技术来初始化具有块结构的矩阵。
 
-```c++
+```cpp
 MatrixXf matA(2, 2);
 matA << 1, 2, 3, 4;
 MatrixXf matB(4, 4);
@@ -2081,7 +2081,7 @@ std::cout << matB << std::endl;
 
 逗号初始化同样也可以填充块表达式如`m.row(i)`，下面使用一个更加复杂的方式来实现第一个示例：
 
-```c++
+```cpp
 Matrix3f m;
 m.row(0) << 1, 2, 3;
 m.block(1,0,2,2) << 4, 5, 7, 8;
@@ -2105,7 +2105,7 @@ std::cout << m;
 
 共有三种重载，第一个重载不需要任何参数，仅可以用在固定大小的对象。如果想要一个动态大小的对象，需要指定大小。因此，第二个重载需要一个参数用来初始化一维动态对象。第三个重载，需要两个参数用来初始化二维对象的大小。所有的重载解释如下：
 
-```c++
+```cpp
 std::cout << "A fixed-size array:\n";
 Array33f a1 = Array33f::Zero();
 std::cout << a1 << "\n\n";
@@ -2148,7 +2148,7 @@ A two-dimensional dynamic-size array:
 
 方法`LinSpaced(size,low,high)`只对向量和一维数组有效，它产生一个指定大小在`low`和`high`的等差数列。下面的例子解释`LinSpaced()`，打印一个表格，包含角度和弧度的对应值，以及他们的`sin`和`cos`值。
 
-```c++
+```cpp
 ArrayXXf table(10, 4);
 table.col(0) = ArrayXf::LinSpaced(10, 0, 90);
 table.col(1) = M_PI / 180 * table.col(0);
@@ -2176,7 +2176,7 @@ Degrees   Radians      Sine    Cosine
 
 此示例表明可以将像 `LinSpaced()` 这样的对象分配给变量（或表达式）。Eigen定义了诸如 [setZero()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#af230a143de50695d2d1fae93db7e4dcb)、[MatrixBase::setIdentity()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#a18e969adfdf2db4ac44c47fbdc854683) 和 [DenseBase::setLinSpaced()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a5d1ce9e801fa502e02b9b8cd9141ad0a) 之类的函数来执行此操作。下面的例子对比了三种方法来构造矩阵 $J = \begin{bmatrix} O & I \\ I & O \\ \end{bmatrix}$：
 
-```c++
+```cpp
 const int size = 6;
 MatrixXd mat1(size, size);
 mat1.topLeftCorner(size/2, size/2)     = MatrixXd::Zero(size/2, size/2);
@@ -2231,7 +2231,7 @@ std::cout << mat3 << std::endl;
 
 这些表达式也可以用作临时对象。如下是 [入门](# 入门) 章节的第二个示例，其说明了这个特性：
 
-```c++
+```cpp
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -2266,7 +2266,7 @@ m * v =
 
 逗号初始化也可以构造临时对象，下面的例子构造了一个`2*3`的随机矩阵，然后与矩阵 $\begin{bmatrix} 0 & 1 \\ 1 & 0 \\ \end{bmatrix}$ 相乘。
 
-```c++
+```cpp
 MatrixXf mat = MatrixXf::Random(2, 3);
 std::cout << mat << std::endl << std::endl;
 mat = (MatrixXf(2,2) << 0, 1, 1, 0).finished() * mat;
