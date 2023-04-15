@@ -2289,7 +2289,7 @@ std::cout << mat << std::endl;
 
 ## 3.7 归约、访问者和广播
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialReductionsVisitorsBroadcasting.html)
+[英文原文(Reductions, visitors and broadcasting)](http://eigen.tuxfamily.org/dox/group__TutorialReductionsVisitorsBroadcasting.html)
 
 本文介绍了`Eigen`的归约、访问者和广播，以及它们如何与矩阵和数组一起使用。
 
@@ -2297,7 +2297,7 @@ std::cout << mat << std::endl;
 
 在Eigen，归约是把一个矩阵和数组变成一个标量的方法。一个经常用到的归约方法是`sum()`，它返回给定矩阵或数组内所有系数的总和。
 
-```c++
+```cpp
 // 代码索引 3-7-1-1
 #include <iostream>
 #include <Eigen/Dense>
@@ -2342,7 +2342,7 @@ Eigen还提供了 [norm()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBa
 
 如果想要其他系数的范数，可以使用[lpNorm\<p\>()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#a72586ab059e889e7d2894ff227747e35)方法。如果你想要 $\infty$ 范数，模板参数 p 可以取特殊值 `Infinity`，这将返回系数绝对值的最大值。如下：
 
-```c++
+```cpp
 // 代码索引 3-7-2-1
 #include <Eigen/Dense>
 #include <iostream>
@@ -2387,7 +2387,7 @@ m.lpNorm<Infinity>() = 4
 
 1-范数和 $\infty$-范数矩阵运算符范数可以很容易地计算如下：
 
-```c++
+```cpp
 // 代码索引 3-7-2-2
 #include <Eigen/Dense>
 #include <iostream>
@@ -2429,7 +2429,7 @@ infty-norm(m) = 7 == 7
 
 示例如下：
 
-```c++
+```cpp
 // 代码索引 3-7-3-1
 #include <Eigen/Dense>
 #include <iostream>
@@ -2475,7 +2475,7 @@ int main()
 
 当想要获取元素在 Matrix 或 Array 中的位置时，访问者函数很有用。例如 [maxCoeff(&x,&y)](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a7e6987d106f1cca3ac6ab36d288cc8e1) 和 [minCoeff(&x,&y)](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a0739f9c868c331031c7810e21838dcb2)，它们可用于查找 Matrix 或 Array 中最大或最小元素的位置，位置通过传入要存储行和列位置变量的指针返回。这些变量应该是 [Index](http://eigen.tuxfamily.org/dox/namespaceEigen.html#a62e77e0933482dafde8fe197d9a2cfde) 类型，如下所示：
 
-```c++
+```cpp
 // 代码索引 3-7-4-1
 #include <iostream>
 #include <Eigen/Dense>
@@ -2519,7 +2519,7 @@ Min: 1, at: 0,0
 
 如下示例，获取给定矩阵中每一列中元素的最大值，并将结果存储在行向量中：
 
-```c++
+```cpp
 // 代码索引 3-7-5-1
 #include <iostream>
 #include <Eigen/Dense>
@@ -2545,7 +2545,7 @@ Column's maximum:
 
 类似的，可得到每一行中元素的最大值，如下：
 
-```c++
+```cpp
 // 代码索引 3-7-5-2
 #include <iostream>
 #include <Eigen/Dense>
@@ -2572,7 +2572,7 @@ int main()
 
 如下示例，查找矩阵中元素总和最大的列：
 
-```c++
+```cpp
 // 代码索引 3-7-5-3
 #include <iostream>
 #include <Eigen/Dense>
@@ -2622,7 +2622,7 @@ $$
 
 如下示例，将某个列向量添加到矩阵中的每一列：
 
-```c++
+```cpp
 // 代码索引 3-7-6-1
 #include <iostream>
 #include <Eigen/Dense>
@@ -2665,7 +2665,7 @@ $$
 
 如下示例，按行执行相同的操作：
 
-```c++
+```cpp
 // 代码索引 3-7-6-2
 #include <iostream>
 #include <Eigen/Dense>
