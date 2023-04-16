@@ -2759,7 +2759,7 @@ $$
 
 ## 3.8 Reshape操作
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialReshape.html)
+[英文原文(Reshape)](http://eigen.tuxfamily.org/dox/group__TutorialReshape.html)
 
 从 `Eigen3.4` 开始，Eigen 发布了将矩阵或向量重塑为不同大小的便捷方法。所有的操作可以通过 `DenseBase::reshaped(NRowsType,NColsType)` 和 `DenseBase::reshaped()` 两个函数完成。这些函数并不直接改变原有的变量，而是返回一个重塑后的变量副本。
 
@@ -2885,13 +2885,13 @@ Here is the matrix m after m.resize(2,8):
 
 最后，目前不支持将reshape处理后的矩阵分配给自身，也不支持由于别名而导致未定义的行为。禁止以下行为：
 
-```c++
+```cpp
 A = A.reshaped(2,8);
 ```
 
 但这样是可以的：
 
-```c++
+```cpp
 A = A.reshaped(2,8).eval(); 
 ```
 
@@ -3888,7 +3888,6 @@ Foo<3> *foo3 = new Foo<3>; // foo3 has only the system default alignment guarant
 ```
 
 
-
 #### 其他解决方案
 
 如果随处放置 `EIGEN_MAKE_ALIGNED_OPERATOR_NEW` 宏过于麻烦，至少还有两个其他解决方案。
@@ -3941,35 +3940,65 @@ private:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### 3.13.4 将STL容器与Eigen一起使用
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicStlContainers.html)
+[英文原文(Using STL Containers with Eigen)](http://eigen.tuxfamily.org/dox/group__TopicStlContainers.html)
+
+
+
+#### 摘要
+
+同样，如果使用足够新的编译器（例如，GCC>=7、clang>=5、MSVC>=19.12）以 [c++17] 模式编译，那么编译器会自动处理所有事情，可以跳过本节。
+
+否则，在固定大小的可向量化 Eigen 类型或具有此类成员的类上使用 STL 容器时，需要使用过度对齐的分配器。
+
+也就是说，分配器能够分配具有 16、32 甚至 64 字节对齐的缓冲区。Eigen 确实提供了一个接口：[aligned_allocator](http://eigen.tuxfamily.org/dox/classEigen_1_1aligned__allocator.html)。
+
+在 [c++11] 之前，如果想使用 `std::vector` 容器，还必须`#include <Eigen/StdVector>`。
+
+这些问题仅出现在固定大小的可向量化 Eigen 类型和具有此类 Eigen 对象作为成员的结构体中。对于其他 Eigen 类型，例如 `Vector3f` 或 `MatrixXd`，在使用 STL 容器时无需特别注意。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
