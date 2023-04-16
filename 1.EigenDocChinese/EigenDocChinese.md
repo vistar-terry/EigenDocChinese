@@ -3863,6 +3863,88 @@ public:
 
 
 
+#### 怎样有条件地执行此操作（取决于模板参数）？
+
+对于这种情况，我们提供宏 `EIGEN_MAKE_ALIGNED_OPERATOR_NEW_IF(NeedsToAlign)`。如果 `NeedsToAlign` 为 `true`，它将生成对齐的运算符，如 `EIGEN_MAKE_ALIGNED_OPERATOR_NEW`。如果 `NeedsToAlign `为 `false`，它将生成具有默认对齐方式的运算符。在 [c++17] 中，这个宏是空的。
+
+示例如下：
+
+```cpp
+template<int n> class Foo
+{
+  typedef Eigen::Matrix<float,n,1> Vector;
+  enum { NeedsToAlign = (sizeof(Vector)%16)==0 };
+  ...
+  Vector v;
+  ...
+public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW_IF(NeedsToAlign)
+};
+ 
+...
+ 
+Foo<4> *foo4 = new Foo<4>; // foo4 is guaranteed to be 128bit-aligned
+Foo<3> *foo3 = new Foo<3>; // foo3 has only the system default alignment guarantee
+```
+
+
+
+#### 其他解决方案
+
+如果随处放置 `EIGEN_MAKE_ALIGNED_OPERATOR_NEW` 宏过于麻烦，至少还有两个其他解决方案。
+
+##### 禁用对齐
+
+第一个是禁用固定大小成员的对齐要求：
+
+```cpp
+class Foo
+{
+  ...
+  Eigen::Matrix<double,4,1,Eigen::DontAlign> v;
+  ...
+};
+```
+
+这里的 `v` 与对齐的 `Eigen::Vector4d` 完全兼容。但这样会使对 `v` 的加载/存储效率更低（通常略有减少，但这取决于硬件）。
+
+
+
+##### 私有结构体
+
+第二个是将固定大小的对象存储到一个私有结构体中，该结构体将在主对象构造时动态分配：
+
+```cpp
+struct Foo_d
+{
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  Vector4d v;
+  ...
+};
+ 
+ 
+struct Foo {
+  Foo() { init_d(); }
+  ~Foo() { delete d; }
+  void bar()
+  {
+    // use d->v instead of v
+    ...
+  }
+private:
+  void init_d() { d = new Foo_d; }
+  Foo_d* d;
+};
+```
+
+这里的明显优势是 `Foo` 类在对齐问题上保持不变。缺点是无论如何都需要额外的堆内存空间分配。
+
+
+
+
+
+
+
 
 
 
