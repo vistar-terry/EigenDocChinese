@@ -4014,21 +4014,45 @@ std::vector<Eigen::Vector2d>
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 ### 3.13.5 按值将Eigen对象传递给函数
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicPassingByValue.html)
+[英文原文(Passing Eigen objects by value to functions)](http://eigen.tuxfamily.org/dox/group__TopicPassingByValue.html)
+
+按值传递对象在 C++ 中几乎总是一个非常糟糕的用法，因为这会创建无用的副本，应该通过引用传递它们。
+
+对于 Eigen，这一点更为重要：按值传递固定大小的可向量化 Eigen 对象不仅效率低下，而且可能是非法的或使程序崩溃！
+
+原因是这些 Eigen 对象具有对齐修饰符，在按值传递时会不遵守这些修饰符。
+
+例如，像这样的函数，其中 `v` 按值传递：
+
+```cpp
+void my_function(Eigen::Vector2d v);
+```
+
+需要重写如下，通过 `const` 引用传递 `v` ：
+
+```cpp
+void my_function(const Eigen::Vector2d& v);
+```
+
+同样，如果有一个以 Eigen 对象作为成员的类：
+
+```cpp
+struct Foo
+{
+  Eigen::Vector2d v;
+};
+void my_function(Foo v);
+```
+
+这个函数也需要这样改写：
+
+```cpp
+void my_function(const Foo& v);
+```
+
+请注意，按值返回对象的函数是没有问题的。
 
 
 
