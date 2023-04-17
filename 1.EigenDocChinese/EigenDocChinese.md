@@ -3960,33 +3960,57 @@ private:
 
 
 
+#### 使用对齐分配器
+
+STL 容器有一个可选的模板参数，即分配器类型。在固定大小的可向量化 Eigen 类型上使用 STL 容器时，需要告诉容器使用在 16 字节对齐（或更多）位置分配内存的分配器。Eigen 提供了这样一个分配器：`Eigen::aligned_allocator`。
+
+例如：
+
+```cpp
+std::map<int, Eigen::Vector4d>
+```
+
+他的对齐的分配器形式为：
+
+```cpp
+std::map<int, Eigen::Vector4d, std::less<int>, 
+         Eigen::aligned_allocator<std::pair<const int, Eigen::Vector4d>>>
+```
+
+请注意，第三个参数 `std::less<int>` 只是默认值，但必须包含它，因为要指定第四个参数，即分配器类型。
 
 
 
+#### std::vector 的情况
+
+本节仅适用于 `c++98/03` 用户。 [c++11]（或以上）用户可以跳过这里。
+
+在 `c++98/03` 中，因为标准中的一个 bug 使 `std::vector` 的情况更加复杂。为了解决这个问题，必须使用 `Eigen::aligned_allocator`和`#include <Eigen/StdVector>`。
+
+示例如下：
+
+```cpp
+#include<Eigen/StdVector>
+/* ... */
+std::vector<Eigen::Vector4f,Eigen::aligned_allocator<Eigen::Vector4f> >
+```
+
+`std::vector` 的 `resize()` 方法接受一个 `value_type` 参数（默认为 value_type()）。因此，对于 `std::vector<Eigen::Vector4d>`，一些 `Eigen::Vector4d` 对象将按值传递，这会丢弃所有对齐修饰符，因此可以在未对齐的位置创建 `Eigen::Vector4d`。为了避免这种情况，唯一解决方案是特殊化 `std::vector` 以使其在 `Eigen::Vector4d` 上生效。
 
 
 
+#### 另一种选择 - 为 Eigen 类型特殊化 std::vector
 
+作为上述推荐方法的替代方法，可以选择将 `std::vector` 特殊化为需要对齐的 Eigen 类型。优点是不需要使用 `Eigen::aligned_allocator` 声明 `std::vector`。缺点是需要在所有代码段之前定义特殊化，例如使用 `std::vector<Vector2d>`。否则，在不知道特殊化的情况下，编译器将使用默认的 `std::allocator` 编译该特定实例，并且程序很可能会崩溃。
 
+示例如下：
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```cpp
+include<Eigen/StdVector>
+/* ... */
+EIGEN_DEFINE_STL_VECTOR_SPECIALIZATION(Matrix2d)
+std::vector<Eigen::Vector2d>
+```
 
 
 
