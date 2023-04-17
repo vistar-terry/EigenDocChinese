@@ -4058,29 +4058,63 @@ void my_function(const Foo& v);
 
 ### 3.13.6 编译器对堆栈对齐做出了错误的假设
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicWrongStackAlignment.html)
+[英文原文(Compiler making a wrong assumption on stack alignment)](http://eigen.tuxfamily.org/dox/group__TopicWrongStackAlignment.html)
+
+这是 `GCC` 的错误，已在 `GCC 4.5` 中修复。如果遇到此问题，请升级到 `GCC 4.5` 。
+
+到目前为止，我们只在 Windows 上遇到过 GCC：例如，MinGW 和 TDM-GCC。
+
+默认情况下，在类似如下函数中：
+
+```cpp
+void foo()
+{
+  Eigen::Quaternionf q;
+  //...
+}
+```
+
+GCC 假定堆栈已经是 16 字节对齐的，因此对象 `q` 将在 16 字节对齐的位置创建。根据 Eigen 的要求，不需要特别注意显式对齐对象 `q`。
+
+问题是，在某些特定情况下，这种假设在 Windows 上可能是错误的，其中堆栈只保证 4 字节对齐。 实际上，即使 GCC 负责对齐 main 函数中的堆栈并尽最大努力保持其对齐，但当从另一个线程或从使用另一个编译器编译的二进制文件调用函数时，堆栈对齐可能会被破坏。这会导致在未对齐的位置创建对象  `q`，从而使程序因对未对齐数组断言而崩溃。至此我们找到了以下解决方案。
 
 
 
+#### 局部解决方案
+
+局部解决方案是使用此属性标记此类功能：
+
+```cpp
+__attribute__((force_align_arg_pointer)) void foo()
+{
+  Eigen::Quaternionf q;
+  //...
+}
+```
+
+阅读 [GCC 文档](http://gcc.gnu.org/onlinedocs/gcc-4.4.0/gcc/Function-Attributes.html#Function-Attributes) 以了解其作用。当然，这只能在 Windows 上的 GCC 上完成，因此为了可移植性，必须将其封装在一个宏中，并在其他平台上设置该宏为空。此解决方案的优点是可以精确地选择哪个函数可能具有损坏的堆栈对齐。当然，不利的一面是必须为每个此类功能完成此操作，因此可能更喜欢以下两种全局解决方案之一。
 
 
 
+#### 全局解决方案
 
+一个全局解决方案是在 Windows 上使用 GCC 进行编译时，使用如下选项：
 
+```bash
+-mincoming-stack-boundary=2
+```
 
+这告诉 GCC 堆栈只需要对齐到 `2^2=4` 字节，因此 GCC 现在知道它确实必须格外小心，以便在需要时遵守固定大小的可向量化 Eigen 类型的 16 字节对齐。
 
+另一个全局解决方案是使用如下选项：
 
+```bash
+-mstackrealign
+```
 
+这与将 `force_align_arg_pointer` 属性添加到所有函数具有相同的效果。
 
-
-
-
-
-
-
-
-
-
+这些全局解决方案易于使用，但请注意它们可能会损耗程序效率，因为它们会导致每个函数都有额外的序言/结尾说明。
 
 
 
