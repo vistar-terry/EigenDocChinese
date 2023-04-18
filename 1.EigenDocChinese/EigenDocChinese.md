@@ -2901,7 +2901,7 @@ A = A.reshaped(2,8).eval();
 
 ## 3.9 STL迭代器和算法
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialSTL.html)
+[英文原文(STL iterators and algorithms)](http://eigen.tuxfamily.org/dox/group__TutorialSTL.html)
 
 从 3.4 版本开始，Eigen 的稠密矩阵和数组提供了 STL 兼容的迭代器。这使 `Eigen` 自然地与 `range-for` 循环和 STL 算法兼容。
 
@@ -4120,9 +4120,159 @@ __attribute__((force_align_arg_pointer)) void foo()
 
 # 四、稠密线性问题与分解
 
+## 4.1 线性代数和分解
+
+[英文原文(Linear algebra and decomposition)](http://eigen.tuxfamily.org/dox/group__TutorialLinearAlgebra.html)
+
+本节说明如何求解线性系统，计算各种分解，如 `LU`、`QR`、`SVD`、`特征分解`……
+
+
+
+### 求解基本线性系统
+
+**问题**：有一个方程组，写成矩阵方程如下：
+$$
+Ax = b
+$$
+其中 $$A$$ 和 $$b$$ 是矩阵（作为一种特殊情况，$$b$$ 也可以是一个向量）。求解 $$x$$。
+
+**解**：可以根据矩阵 $$A$$ 的属性以及效率和准确性，在各种分解之间进行选择。如下是一个很好的折衷方案：
+
+```cpp
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+   Eigen::Matrix3f A;
+   Eigen::Vector3f b;
+   A << 1,2,3,  4,5,6,  7,8,10;
+   b << 3, 3, 4;
+   std::cout << "Here is the matrix A:\n" << A << std::endl;
+   std::cout << "Here is the vector b:\n" << b << std::endl;
+   Eigen::Vector3f x = A.colPivHouseholderQr().solve(b);
+   std::cout << "The solution is:\n" << x << std::endl;
+}
+```
+
+输出如下：
+
+```
+	
+Here is the matrix A:
+ 1  2  3
+ 4  5  6
+ 7  8 10
+Here is the vector b:
+3
+3
+4
+The solution is:
+-2
+ 1
+ 1
+```
+
+在此示例中，`colPivHouseholderQr()` 方法返回类 `ColPivHouseholderQR` 的对象。由于这里的矩阵是 `Matrix3f` 类型，所以这一行可以替换为：
+
+```cpp
+ColPivHouseholderQR<Matrix3f> dec(A);
+Vector3f x = dec.solve(b);
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 4.2 稠密分解目录
+
+
+
+
+
+
+
+## 4.3 求解线性最小二乘系统
+
+
+
+
+
+##  4.4 就地矩阵分解
+
+
+
+
+
+## 4.5 密集分解的基准
+
+
+
+
+
+
+
 
 
 # 五、稀疏线性代数
+
+## 5.1 稀疏矩阵操作
+
+
+
+
+
+
 
 
 
