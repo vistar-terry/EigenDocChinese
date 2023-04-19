@@ -3007,7 +3007,7 @@ Here is the sorted matrix A:
 
 ## 3.10 原始缓冲区接口：Map 类
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TutorialMapClass.html)
+[英文原文(Interfacing with raw buffers: the Map class)](http://eigen.tuxfamily.org/dox/group__TutorialMapClass.html)
 
 本节解释了如何使用“原始”C/C++ 数组。这在各种情况下都很有用，特别是在将向量和矩阵从其他库“导入”到 Eigen 中时。
 
@@ -3023,7 +3023,7 @@ Here is the sorted matrix A:
 
 Map 对象具有与其等效的 Eigen 定义类型：
 
-```c++
+```cpp
 Map<Matrix<typename Scalar, int RowsAtCompileTime, int ColsAtCompileTime> >
 ```
 
@@ -3033,7 +3033,7 @@ Map<Matrix<typename Scalar, int RowsAtCompileTime, int ColsAtCompileTime> >
 
 例如，要定义一个在编译时确定大小的浮点矩阵，可以执行以下操作：
 
-```
+```cpp
 Map<MatrixXf> mf(pf,rows,columns);
 ```
 
@@ -3041,7 +3041,7 @@ Map<MatrixXf> mf(pf,rows,columns);
 
 固定大小的只读整数向量可以声明为：
 
-```c++
+```cpp
 Map<const Vector4i> mi(pi);
 ```
 
@@ -3051,7 +3051,7 @@ Map<const Vector4i> mi(pi);
 
 Map 足够灵活以适应各种不同的数据表示。还有两个其他可选模板参数：
 
-```c++
+```cpp
 Map<typename MatrixType,
     int MapOptions,
     typename StrideType>
@@ -4180,13 +4180,26 @@ ColPivHouseholderQR<Matrix3f> dec(A);
 Vector3f x = dec.solve(b);
 ```
 
+在这里，`ColPivHouseholderQR` 是列主元 `QR` 分解。这是本教程的一个很好的折衷方案，因为它适用于所有矩阵，而且速度非常快。
 
+以下是可以选择的其他一些分解表，具体取决于矩阵、解决的问题以及需求：
 
+| 描述                                                         | 方法                              | 对矩阵的要求                                        | 速度（中小矩阵） | 速度（大矩阵） | 精度 |
+| ------------------------------------------------------------ | --------------------------------- | --------------------------------------------------- | ---------------- | -------------- | ---- |
+| [PartialPivLU](http://eigen.tuxfamily.org/dox/classEigen_1_1PartialPivLU.html) | partialPivLu()                    | Invertible（可逆）                                  | ++               | ++             | +    |
+| [FullPivLU](http://eigen.tuxfamily.org/dox/classEigen_1_1FullPivLU.html) | fullPivLu()                       | None                                                | -                | - -            | +++  |
+| [HouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1HouseholderQR.html) | householderQr()                   | None                                                | ++               | ++             | +    |
+| [ColPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1ColPivHouseholderQR.html) | colPivHouseholderQr()             | None                                                | +                | -              | +++  |
+| [FullPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1FullPivHouseholderQR.html) | fullPivHouseholderQr()            | None                                                | -                | - -            | +++  |
+| [CompleteOrthogonalDecomposition](http://eigen.tuxfamily.org/dox/classEigen_1_1CompleteOrthogonalDecomposition.html) | completeOrthogonalDecomposition() | None                                                | +                | -              | +++  |
+| [LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html) | llt()                             | Positive definite（正定）                           | +++              | +++            | +    |
+| [LDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LDLT.html) | ldlt()                            | Positive or negative semidefinite（半正定或半负定） | +++              | +              | ++   |
+| [BDCSVD](http://eigen.tuxfamily.org/dox/classEigen_1_1BDCSVD.html) | bdcSvd()                          | None                                                | -                | -              | +++  |
+| [JacobiSVD](http://eigen.tuxfamily.org/dox/classEigen_1_1JacobiSVD.html) | jacobiSvd()                       | None                                                | -                | - - -          | +++  |
 
+要大致了解不同分解的真实相对速度，请查看[基准测试](http://eigen.tuxfamily.org/dox/group__DenseDecompositionBenchmark.html)。
 
-
-
-
+所有这些分解都提供了一个 `solve()` 方法，其工作方式与上例相同。
 
 
 
