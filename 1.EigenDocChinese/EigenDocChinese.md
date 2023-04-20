@@ -3181,7 +3181,7 @@ for (int i = 0; i < n_matrices; i++)
 
 ## 3.11 混叠
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicAliasing.html)
+[英文原文(Aliasing)](http://eigen.tuxfamily.org/dox/group__TopicAliasing.html)
 
 在 `Eigen` 中，混叠是指相同的矩阵（或数组或向量）出现在赋值操作符的左边和右边。如下表达式，`mat = 2*mat` 或者 `mat = mat.transpose()`。第一个表达式是没有问题的，但是第二个表达式，会出现不可预料的结果。这一节会解释什么是混叠，以及它的危害与处理方法。
 
@@ -4201,33 +4201,117 @@ Vector3f x = dec.solve(b);
 
 所有这些分解都提供了一个 `solve()` 方法，其工作方式与上例相同。
 
+可以根据矩阵的属性来选择相应的方法。例如，要求解具有非对称满秩矩阵的线性系统，可以使用 `PartialPivLU`。如果知道矩阵是对称和正定的，可以选择 `LLT` 或 `LDLT` 分解。
+
+示例如下：
+
+```cpp
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+   Eigen::Matrix2f A, b;
+   A << 2, -1, -1, 3;
+   b << 1, 2, 3, 1;
+   std::cout << "Here is the matrix A:\n" << A << std::endl;
+   std::cout << "Here is the right hand side b:\n" << b << std::endl;
+   Eigen::Matrix2f x = A.ldlt().solve(b);
+   std::cout << "The solution is:\n" << x << std::endl;
+}
+```
+
+输出为：
+
+```
+Here is the matrix A:
+ 2 -1
+-1  3
+Here is the right hand side b:
+1 2
+3 1
+The solution is:
+1.2 1.4
+1.4 0.8
+```
+
+有关 Eigen 支持的所有分解的更完整的表格（ Eigen 还支持许多其他分解），请参阅[下一节](#4.2 稠密分解目录)。
 
 
 
+### 最小二乘求解
+
+在最小二乘意义上解决欠定或超定线性系统的最普遍和准确的方法是 `SVD 分解`。Eigen 提供了两种实现。推荐的是 [BDCSVD](http://eigen.tuxfamily.org/dox/classEigen_1_1BDCSVD.html) 类，它可以很好地处理大型矩阵问题，并自动回退到 [JacobiSVD](http://eigen.tuxfamily.org/dox/classEigen_1_1JacobiSVD.html) 类以处理较小矩阵的问题。对于这两个类，他们的 `solve()` 方法在最小二乘意义上解决了线性系统。
+
+示例如下：
+
+```cpp
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+   Eigen::MatrixXf A = Eigen::MatrixXf::Random(3, 2);
+   std::cout << "Here is the matrix A:\n" << A << std::endl;
+   Eigen::VectorXf b = Eigen::VectorXf::Random(3);
+   std::cout << "Here is the right hand side b:\n" << b << std::endl;
+   std::cout << "The least-squares solution is:\n"
+        << A.template bdcSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(b) << std::endl;
+}
+```
+
+输出：
+
+```
+Here is the matrix A:
+  0.68  0.597
+-0.211  0.823
+ 0.566 -0.605
+Here is the right hand side b:
+ -0.33
+ 0.536
+-0.444
+The least-squares solution is:
+-0.67
+0.314
+```
+
+`SVD` 的替代方法是 [CompleteOrthogonalDecomposition](http://eigen.tuxfamily.org/dox/classEigen_1_1CompleteOrthogonalDecomposition.html)，它通常速度更快且准确度差不多。
+
+同样，如果对问题了解更多，可以更好的可能更快的方法。如果矩阵是满秩的，`HouseHolderQR` 是首选方法。如果矩阵是满秩且是[良态](https://www.cnblogs.com/kmliang/archive/2012/12/20/2826740.html)的，则在正规方程的矩阵上使用 Cholesky 分解 (LLT) 可能会更快。关于最小二乘求解的更多详细信息，请参见 [求解线性最小二乘系统](#4.3 求解线性最小二乘系统)。
 
 
 
+### 检查矩阵是否为奇异矩阵
+
+Eigen 允许根据具体的误差自己进行此计算，如本例所示：
+
+```cpp
+#include <iostream>
+#include <Eigen/Dense>
+ 
+using Eigen::MatrixXd;
+ 
+int main()
+{
+   MatrixXd A = MatrixXd::Random(100,100);
+   MatrixXd b = MatrixXd::Random(100,50);
+   MatrixXd x = A.fullPivLu().solve(b);
+   double relative_error = (A*x - b).norm() / b.norm(); // norm() is L2 norm
+   std::cout << "The relative error is:\n" << relative_error << std::endl;
+}
+```
+
+输出：
+
+```
+The relative error is:
+2.31495e-14
+```
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### 计算特征值和特征向量
 
 
 
