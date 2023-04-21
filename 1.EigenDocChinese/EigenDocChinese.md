@@ -3480,7 +3480,7 @@ cout << A;
 
 ## 3.12 存储顺序
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicStorageOrders.html)
+[英文原文(Storage orders)](http://eigen.tuxfamily.org/dox/group__TopicStorageOrders.html)
 
 矩阵和二维数组有两种不同的存储顺序：列优先和行优先。本节解释了这些存储顺序以及如何指定应该使用哪一种。
 
@@ -3564,7 +3564,7 @@ In memory (row-major):
 
 ### 3.13.1 对未对齐数组断言的解释
 
-[英文原文链接](http://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html)
+[英文原文(Explanation of the assertion on unaligned arrays)](http://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html)
 
 该节将解释程序因断言失败而终止，如下所示：
 
@@ -4313,11 +4313,11 @@ The relative error is:
 
 ### 计算特征值和特征向量
 
+虽然逆和行列式是基本的数学概念，但在数值线性代数中它们不如在纯数学中有用。逆计算通常被 `solve()` 操作有利地取代，行列式通常不是检查矩阵是否可逆的好方法。
 
+但是，对于非常小的矩阵，上述情况可能并非如此，逆矩阵和行列式可能非常有用。
 
-
-
-
+虽然某些分解（例如 `PartialPivLU` 和 `FullPivLU`）提供了 `inverse()` 和 `determinant()` 方法，但也可以直接在矩阵上调用`inverse()` 和 `determinant()`。
 
 
 
