@@ -4317,7 +4317,188 @@ The relative error is:
 
 但是，对于非常小的矩阵，上述情况可能并非如此，逆矩阵和行列式可能非常有用。
 
-虽然某些分解（例如 `PartialPivLU` 和 `FullPivLU`）提供了 `inverse()` 和 `determinant()` 方法，但也可以直接在矩阵上调用`inverse()` 和 `determinant()`。
+虽然某些分解（例如 `PartialPivLU` 和 `FullPivLU`）提供了 `inverse()` 和 `determinant()` 方法，但也可以直接在矩阵上调用`inverse()` 和 `determinant()`。如果矩阵是非常小的固定大小（最多 4x4），这种方法可以让 Eigen 不执行 LU 分解，以提高效率。
+
+示例如下：
+
+```cpp
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+   Eigen::Matrix3f A;
+   A << 1, 2, 1,
+        2, 1, 0,
+        -1, 1, 2;
+   std::cout << "Here is the matrix A:\n" << A << std::endl;
+   std::cout << "The determinant of A is " << A.determinant() << std::endl;
+   std::cout << "The inverse of A is:\n" << A.inverse() << std::endl;
+}
+```
+
+输出：
+
+```
+Here is the matrix A:
+ 1  2  1
+ 2  1  0
+-1  1  2
+The determinant of A is -3
+The inverse of A is:
+-0.667      1  0.333
+  1.33     -1 -0.667
+    -1      1      1
+```
+
+
+
+### 将计算与构造分开
+
+在上面的示例中，分解操作是在构造分解对象的同时计算的。然而，在某些情况下，可能希望将这两件事分开，例如，如果在构造时不知道要分解的矩阵，或者想重用现有的分解对象。
+
+实现方法如下：
+
+- 所有分解都有一个默认构造函数。
+- 所有分解都有一个 `compute(matrix)` 方法来进行计算，并且可以在已经计算的分解上再次调用它，重新初始化它。
+
+示例如下：
+
+```cpp
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+   Eigen::Matrix2f A, b;
+   Eigen::LLT<Eigen::Matrix2f> llt;
+   A << 2, -1, -1, 3;
+   b << 1, 2, 3, 1;
+   std::cout << "Here is the matrix A:\n" << A << std::endl;
+   std::cout << "Here is the right hand side b:\n" << b << std::endl;
+   std::cout << "Computing LLT decomposition..." << std::endl;
+   llt.compute(A);
+   std::cout << "The solution is:\n" << llt.solve(b) << std::endl;
+   A(1,1)++;
+   std::cout << "The matrix A is now:\n" << A << std::endl;
+   std::cout << "Computing LLT decomposition..." << std::endl;
+   llt.compute(A);
+   std::cout << "The solution is now:\n" << llt.solve(b) << std::endl;
+}
+```
+
+输出：
+
+```
+Here is the matrix A:
+ 2 -1
+-1  3
+Here is the right hand side b:
+1 2
+3 1
+Computing LLT decomposition...
+The solution is:
+1.2 1.4
+1.4 0.8
+The matrix A is now:
+ 2 -1
+-1  4
+Computing LLT decomposition...
+The solution is now:
+    1  1.29
+    1 0.571
+```
+
+最后，可以告诉分解构造函数为给定大小的分解矩阵预先分配存储空间，这样当随后分解这些矩阵时，就不会进行动态内存分配（当然，如果使用的是固定大小的矩阵，则不会进行动态内存分配）。
+
+这是通过将大小传递给分解构造函数来完成的，示例如下：
+
+```cpp
+HouseholderQR<MatrixXf> qr(50,50);
+MatrixXf A = MatrixXf::Random(50,50);
+qr.compute(A); // no dynamic memory allocation
+```
+
+
+
+### 可以计算秩的分解
+
+某些分解能够计算矩阵的秩，这些通常也是在处理非满秩矩阵时表现最好的分解（在正方形情况下表示奇异矩阵）。关于分解是否可以计算矩阵的秩，请参阅[下一节](#4.2 稠密分解目录)。
+
+可以计算秩的分解至少提供了一个 `rank()` 方法。还有更简单的方法，例如 `isInvertible()`，有些还提供计算矩阵的核（零空间）和图像（列空间）的方法，例如 `FullPivLU`：
+
+```cpp
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+   Eigen::Matrix3f A;
+   A << 1, 2, 5,
+        2, 1, 4,
+        3, 0, 3;
+   std::cout << "Here is the matrix A:\n" << A << std::endl;
+   Eigen::FullPivLU<Eigen::Matrix3f> lu_decomp(A);
+   std::cout << "The rank of A is " << lu_decomp.rank() << std::endl;
+   std::cout << "Here is a matrix whose columns form a basis of the null-space of A:\n"
+        << lu_decomp.kernel() << std::endl;
+   std::cout << "Here is a matrix whose columns form a basis of the column-space of A:\n"
+        << lu_decomp.image(A) << std::endl; // yes, have to pass the original A
+}
+```
+
+输出：
+
+```
+Here is the matrix A:
+1 2 5
+2 1 4
+3 0 3
+The rank of A is 2
+Here is a matrix whose columns form a basis of the null-space of A:
+ 0.5
+   1
+-0.5
+Here is a matrix whose columns form a basis of the column-space of A:
+5 1
+4 2
+3 3
+```
+
+当然，任何秩计算都取决于阈值的选择，因为实际上没有任何浮点矩阵是秩亏的。Eigen 根据不同分解选择一个合理的默认阈值，但通常是对角线大小乘以机器浮点精度。虽然这是 Eigen 可以选择的最佳默认值，但只有用户知道应用程序的正确阈值是多少。用户可以通过在调用 `rank()` 或其他需要使用此类阈值的方法之前对分解对象调用 `setThreshold()` 来设置自定义阈值。分解本身，即 `compute()` 方法，与阈值无关。更改阈值后无需重新计算分解。
+
+```cpp
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+   Eigen::Matrix2d A;
+   A << 2, 1,
+        2, 0.9999999999;
+   Eigen::FullPivLU<Eigen::Matrix2d> lu(A);
+   std::cout << "By default, the rank of A is found to be " << lu.rank() << std::endl;
+   lu.setThreshold(1e-5);
+   std::cout << "With threshold 1e-5, the rank of A is found to be " << lu.rank() << std::endl;
+}
+```
+
+输出：
+
+```
+By default, the rank of A is found to be 2
+With threshold 1e-5, the rank of A is found to be 1
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
