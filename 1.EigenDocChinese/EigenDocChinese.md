@@ -4052,7 +4052,7 @@ void my_function(Foo v);
 void my_function(const Foo& v);
 ```
 
-请注意，按值返回对象的函数是没有问题的。
+请注意，按值返回对象的函数不会存在这个问题。
 
 
 
@@ -4492,6 +4492,26 @@ With threshold 1e-5, the rank of A is found to be 1
 
 
 
+## 4.2 稠密分解方法目录
+
+[英文原文(Catalogue of dense decompositions)](http://eigen.tuxfamily.org/dox/group__TopicLinearAlgebraDecompositions.html)
+
+本文介绍了 Eigen 提供的处理稠密矩阵分解方法的目录。有关线性求解器和分解的介绍，请查看 [线性代数和分解](# 4.1 线性代数和分解) 。要大致了解不同分解的真实相对速度，请查看 [基准测试](http://eigen.tuxfamily.org/dox/group__DenseDecompositionBenchmark.html)。
+
+
+
+### Eigen 提供的分解方法目录
+
+| 描述                                                         | 对矩阵的要求   | 速度   | 算法可靠性和准确性                                           | 计算秩 | 允许的计算（除了线性求解） | Eigen提供线性求解器 | Eigen的成熟度 | 优化                   |
+| ------------------------------------------------------------ | -------------- | ------ | ------------------------------------------------------------ | ------ | -------------------------- | ------------------- | ------------- | ---------------------- |
+| [PartialPivLU](http://eigen.tuxfamily.org/dox/classEigen_1_1PartialPivLU.html) | 可逆           | 快     | 取决于[条件数](https://baike.baidu.com/item/%E7%9F%A9%E9%98%B5%E6%9D%A1%E4%BB%B6%E6%95%B0/10150161?fr=aladdin) | 不支持 | -                          | 是                  | 成熟          | 按块处理，隐式多线程   |
+| [FullPivLU](http://eigen.tuxfamily.org/dox/classEigen_1_1FullPivLU.html) | -              | 慢     | Proven                                                       | 支持   | -                          | 是                  | 成熟          | -                      |
+| [HouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1HouseholderQR.html) | -              | 快     | 取决于条件数                                                 | 不支持 | 正交化                     | 是                  | 成熟          | 按块处理               |
+| [ColPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1ColPivHouseholderQR.html) | -              | 快     | 好                                                           | 支持   | 正交化                     | 是                  | 成熟          | -                      |
+| [FullPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1FullPivHouseholderQR.html) | -              | 慢     | Proven                                                       | 支持   | 正交化                     | 是                  | 一般          | -                      |
+| [CompleteOrthogonalDecomposition](http://eigen.tuxfamily.org/dox/classEigen_1_1CompleteOrthogonalDecomposition.html) | -              | 快     | 好                                                           | 支持   | 正交化                     | 是                  | 成熟          | -                      |
+| [LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html) | 正定           | 非常快 | 取决于条件数                                                 | 不支持 | -                          | 是                  | 成熟          | 按块处理               |
+| [LDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LDLT.html) | 半正定或半负定 | 非常快 | 好                                                           | 不支持 | -                          | 是                  | 成熟          | 按块处理（暂时未支持） |
 
 
 
@@ -4512,7 +4532,30 @@ With threshold 1e-5, the rank of A is found to be 1
 
 
 
-## 4.2 稠密分解目录
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
