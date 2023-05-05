@@ -168,7 +168,7 @@ int main()
 
 输出：
 
-```c++
+```
 m =
   94 89.8 43.5
 49.4  101 86.8
@@ -347,6 +347,7 @@ RowVectorXd b {{1.0, 2.0, 3.0, 4.0}};     // 包含4个元素的行向量，本�
 在Eigen中主要的元素访问与修改方法是重载括号运算符。对于矩阵，行索引总是优先传递的。对于向量，只需要传递一个索引，索引从0开始。如下：
 
 ```cpp
+// 代码索引 3-1-1-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -385,6 +386,7 @@ Here is the vector v:
 可以使用所谓的`逗号初始化`语法初始化矩阵和向量。如下：
 
 ```cpp
+// 代码索引 3-1-1-1
 Matrix3f m;
 m << 1, 2, 3,
      4, 5, 6,
@@ -405,6 +407,7 @@ std::cout << m;
 矩阵的当前大小可以通过 [rows()](https://eigen.tuxfamily.org/dox/structEigen_1_1EigenBase.html#ac22eb0695d00edd7d4a3b2d0a98b81c2)、[cols()](https://eigen.tuxfamily.org/dox/structEigen_1_1EigenBase.html#a2d768a9877f5f69f49432d447b552bfe) 和 [size()](https://eigen.tuxfamily.org/dox/structEigen_1_1EigenBase.html#ae106171b6fefd3f7af108a8283de36c9) 来检索。这些方法分别返回行数、列数和元素个数。调整动态大小矩阵的大小可以使用 [resize()](https://eigen.tuxfamily.org/dox/classEigen_1_1PlainObjectBase.html#a9fd0703bd7bfe89d6dc80e2ce87c312a) 方法。
 
 ```cpp
+// 代码索引 3-1-2-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -434,18 +437,25 @@ As a matrix, v is of size 5x1
 
 如果矩阵的大小没有改变，那么 `resize()` 方法是空操作。否则，该方法会破坏当前的矩阵，矩阵的元素可能会改变。如果你不想改变矩阵的系数，可以使用resize()的变体 [conservativeResize()](http://eigen.tuxfamily.org/dox/classEigen_1_1PlainObjectBase.html#a712c25be1652e5a64a00f28c8ed11462)。
 
-> 这里进一步解释一下，如果矩阵的大小没有改变， `resize()` 不执行内存分配并且保持矩阵元素值不变，如果矩阵的大小改变了（行数、列数、元素数至少任意一个改变）  ，数据被重新分配并且丢失矩阵所有值初始化为0，如下：
+> 这里进一步解释一下，如果矩阵的大小没有改变， `resize()` 不执行内存分配并且保持矩阵元素值不变，如果矩阵的大小改变了（行数、列数、元素数至少任意一个改变），数据被重新分配并丢失矩阵所有值且初始化为0；
+>
+> `conservativeResize()` 函数，当新矩阵尺寸小于原矩阵，以(0,0)元素为基准原点截取原矩阵作为新矩阵；当新矩阵尺寸大于原矩阵，多出的元素用0补齐。如下：
 >
 > ```cpp
 > #include <iostream>
 > #include <Eigen/Dense>
->  
+> 
 > int main()
 > {
->   Eigen::MatrixXd m{{1,2,3,4},{5,6,7,8},{9,10,11,12},{13,14,15,16}};
->   std::cout << "Before resize, the matrix m is: \n" << m << std::endl;
->   m.resize(3, 4);
->   std::cout << "After resize, the matrix m is: \n" << m << std::endl;
+>     Eigen::MatrixXd m{{1,2,3,4},{5,6,7,8},{9,10,11,12},{13,14,15,16}};
+>     std::cout << "Before resize, the matrix m is: \n" << m << std::endl;
+>     m.resize(3, 4);
+>     std::cout << "After resize, the matrix m is: \n" << m << std::endl;
+>     
+>     Eigen::MatrixXd n{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
+>     std::cout << "Before conservativeResize, the matrix n is: \n" << n << std::endl;
+>     n.conservativeResize(5, 3);
+>     std::cout << "After conservativeResize, the matrix n is: \n" << n << std::endl;
 > }
 > ```
 >
@@ -461,6 +471,17 @@ As a matrix, v is of size 5x1
 > 0 0 0 0
 > 0 0 0 0
 > 0 0 0 0
+> Before conservativeResize, the matrix n is: 
+>  1  2  3  4
+>  5  6  7  8
+>  9 10 11 12
+> 13 14 15 16
+> After conservativeResize, the matrix n is: 
+>  1  2  3
+>  5  6  7
+>  9 10 11
+> 13 14 15
+>  0  0  0
 > ```
 
 为了 API 统一，所有这些方法在固定大小的矩阵上仍然可用。当然，实际上无法调整固定大小的矩阵。尝试将固定大小更改为实际不同的值将触发断言失败，但代码在语法上是合法的，如下：
@@ -563,6 +584,8 @@ Matrix<typename Scalar,
 
 - `N`可以是`2`, `3`, `4` 或`X`(意思是`Dynamic`) 中的任何一个。
 - `t`可以是`i(int)`、`f(float)`、`d(double)`、`cf(complex<float>)` 或`cd(complex<double>)` 中的任何一个。虽然这里只定义了五种类型，但并不意味只支持这五种。例如，还支持所有标准整数类型，请参阅[标量类型](https://eigen.tuxfamily.org/dox/TopicScalarTypes.html)。
+
+
 
 ## 3.2 矩阵与向量运算
 
