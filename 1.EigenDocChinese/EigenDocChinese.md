@@ -4143,7 +4143,7 @@ __attribute__((force_align_arg_pointer)) void foo()
 
 # 四、稠密线性问题与分解
 
-## 4.1 线性代数和分解
+## 4.1 线性代数与分解
 
 [英文原文(Linear algebra and decomposition)](http://eigen.tuxfamily.org/dox/group__TutorialLinearAlgebra.html)
 
@@ -4536,57 +4536,75 @@ With threshold 1e-5, the rank of A is found to be 1
 | [LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html) | 正定           | 非常快 | 取决于条件数                                                 | 不支持 | -                          | 是                  | 成熟          | 按块处理               |
 | [LDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LDLT.html) | 半正定或半负定 | 非常快 | 好                                                           | 不支持 | -                          | 是                  | 成熟          | 按块处理（暂时未支持） |
 
+奇异值和特征值分解
+
+| [BDCSVD](http://eigen.tuxfamily.org/dox/classEigen_1_1BDCSVD.html) (divide & conquer) |        | 最快的 SVD 算法之一        | 很好         | 支持   | 奇异值/向量、最小二乘法 | 是（并且做最小二乘法） | 成熟 | 按块处理，隐式多线程  |
+| ------------------------------------------------------------ | ------ | -------------------------- | ------------ | ------ | ----------------------- | ---------------------- | ---- | --------------------- |
+| [JacobiSVD](http://eigen.tuxfamily.org/dox/classEigen_1_1JacobiSVD.html) (two-sided) |        | 慢（但对于小矩阵来说很快） | Proven       | 支持   | 奇异值/向量、最小二乘法 | 是（并且做最小二乘法） | 成熟 | R-SVD                 |
+| [SelfAdjointEigenSolver](http://eigen.tuxfamily.org/dox/classEigen_1_1SelfAdjointEigenSolver.html) | 自伴随 | 平均很块                   | 好           | 支持   | 特征值/向量             | -                      | 成熟 | -                     |
+| [ComplexEigenSolver](http://eigen.tuxfamily.org/dox/classEigen_1_1ComplexEigenSolver.html) | 方阵   | 非常慢                     | 取决于条件数 | 支持   | 特征值/向量             | -                      | 一般 | 2x2 和 3x3 的封闭形式 |
+| [EigenSolver](http://eigen.tuxfamily.org/dox/classEigen_1_1EigenSolver.html) | 实方阵 | 平均很慢                   | 取决于条件数 | 支持   | 特征值/向量             | -                      | 一般 | -                     |
+| [GeneralizedSelfAdjointEigenSolver](http://eigen.tuxfamily.org/dox/classEigen_1_1GeneralizedSelfAdjointEigenSolver.html) | 方阵   | 平均很块                   | 取决于条件数 | 不支持 | 广义特征值/向量         | -                      | 好   | -                     |
+
+辅助分解
+
+| [RealSchur](https://eigen.tuxfamily.org/dox/classEigen_1_1RealSchur.html) | 实方阵 | 平均很慢 | 取决于条件数 | 支持 | -    | -    | 一般 | -                      |
+| ------------------------------------------------------------ | ------ | -------- | ------------ | ---- | ---- | ---- | ---- | ---------------------- |
+| [ComplexSchur](https://eigen.tuxfamily.org/dox/classEigen_1_1ComplexSchur.html) | 方阵   | 非常慢   | 取决于条件数 | 支持 | -    | -    | 一般 | -                      |
+| [Tridiagonalization](https://eigen.tuxfamily.org/dox/classEigen_1_1Tridiagonalization.html) | 自伴随 | 快       | 好           | -    | -    | -    | 好   | 按块处理（暂时未支持） |
+| [HessenbergDecomposition](https://eigen.tuxfamily.org/dox/classEigen_1_1HessenbergDecomposition.html) | 实方阵 | 一般     | 好           | -    | -    | -    | 好   | 按块处理（暂时未支持） |
+
+注意：
+
+- LDLT 算法存在两种变体。Eigen 产生一个纯对角矩阵，因此它不能处理不定矩阵，这与 Lapack 的产生块对角矩阵不同。
+- 特征值、SVD 和 Schur 分解依赖于迭代算法。它们的收敛速度取决于特征值的分离程度。
+- JacobiSVD 是双边的，可以为方阵提供经过验证的最佳精度。对于非方阵，必须先使用 QR 预处理器。默认选择的 `ColPivHouseholderQR` 已经非常可靠，但如果希望长期测试它，请改用 `FullPivHouseholderQR`。
 
 
 
+### 术语
 
+- 自伴随（Selfadjoint）
 
+    对于实数矩阵，selfadjoint 是对称的同义词。对于复数矩阵，selfadjoint 是 hermitian 的同义词。更一般地，矩阵 A 是自伴随的当且仅当它等于它的伴随 $A^*$。伴随也称为共轭转置。
 
+- 正/负定（Positive/negative definite）
 
+    如果对于任何非零向量 $v$，有 $v^∗Av>0$ ，则自伴矩阵 $A$ 是正定的。同样，如果对于任何非零向量 $v$，有 $v^∗Av<0$ ，则它是负定的。
 
+- 正/负半定（Positive/negative semidefinite）
 
+    对于任何非零向量 $v$，如果 $v^∗Av≥0$，则自伴矩阵 $A$ 是半正定矩阵。同理，对于任何非零向量 $v$，若 $v^∗Av≤0$ 则为负半定。
 
+- 按块处理（Blocking）
 
+    意味着该算法可以按块处理矩阵，从而保证了大型矩阵的性能良好扩展。
 
+- 隐式多线程（Implicit Multi Threading (MT)）
 
+    意味着该算法可以通过 `OpenMP` 利用多核处理器。“隐式”意味着算法本身不是并行的，而是依赖于并行化的矩阵-矩阵乘积例程。
 
+- 显式多线程（Explicit Multi Threading (MT)）
 
+    意味着该算法明确并行化以通过 `OpenMP` 利用多核处理器。
 
+- 元展开器（Meta-unroller）
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    意味着该算法会针对非常小的固定大小矩阵自动且显式展开。
 
 
 
 ## 4.3 求解线性最小二乘系统
+
+
+
+
+
+
+
+
+
+
 
 
 
