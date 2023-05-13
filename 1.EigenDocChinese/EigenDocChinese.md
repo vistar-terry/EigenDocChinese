@@ -4596,11 +4596,100 @@ With threshold 1e-5, the rank of A is found to be 1
 
 ## 4.3 求解线性最小二乘系统
 
+[英文原文(Solving linear least squares systems)](http://eigen.tuxfamily.org/dox/group__LeastSquares.html)
+
+本页介绍如何使用 Eigen 求解线性最小二乘系统。有一个超定方程组，比如$Ax = b$，没有解。在这种情况下，搜索最接近解的向量 $x$ 是有意义的，使此时的差值 $Ax - b $ 尽可能小。这个 $x$ 称为最小二乘解（如果使用欧几里得范数）。
+
+本页讨论的三种方法是 `SVD 分解`、`QR 分解`和`正规方程`。其中，SVD 分解通常最准确但最慢，正规方程式最快但最不准确，QR 分解介于两者之间。
 
 
 
+### SVD 分解
+
+[BDCSVD](http://eigen.tuxfamily.org/dox/classEigen_1_1BDCSVD.html)类中的 `solve()` 方法可以直接用于求解二次线性系统。仅计算奇异值（此类的默认值）是不够的，还需要奇异向量，但稀疏 SVD 分解足以计算最小二乘解：
+
+示例：
+
+```cpp
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+   Eigen::MatrixXf A = Eigen::MatrixXf::Random(3, 2);
+   std::cout << "Here is the matrix A:\n" << A << std::endl;
+   Eigen::VectorXf b = Eigen::VectorXf::Random(3);
+   std::cout << "Here is the right hand side b:\n" << b << std::endl;
+   std::cout << "The least-squares solution is:\n"
+        << A.template bdcSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(b) << std::endl;
+}
+```
+
+输出：
+
+```
+Here is the matrix A:
+  0.68  0.597
+-0.211  0.823
+ 0.566 -0.605
+Here is the right hand side b:
+ -0.33
+ 0.536
+-0.444
+The least-squares solution is:
+-0.67
+0.314
+```
+
+这是 [4.1 线性代数与分解](#4.1 线性代数与分解)中的示例，如果只需要解决最小二乘问题，但对 SVD 本身不感兴趣，则可以使用更快的替代方法 `CompleteOrthogonalDecomposition`。
 
 
+
+### QR 分解
+
+QR 分解类中的 `solve()` 方法也可以计算最小二乘解。
+
+共有三个 QR 分解类：[HouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1HouseholderQR.html)（无旋转，快速但不稳定，如果矩阵不是满秩），[ColPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1ColPivHouseholderQR.html)（列旋转，因此有点慢但更稳定）和[FullPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1FullPivHouseholderQR.html)（完全旋转，比[ColPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1ColPivHouseholderQR.html)更慢更稳定）。如下是一个列旋转的例子：
+
+```cpp
+MatrixXf A = MatrixXf::Random(3, 2);
+VectorXf b = VectorXf::Random(3);
+cout << "The solution using the QR decomposition is:\n"
+     << A.colPivHouseholderQr().solve(b) << endl;
+```
+
+输出：
+
+```
+The solution using the QR decomposition is:
+-0.67
+0.314
+```
+
+
+
+### 正规方程
+
+求 $Ax = b$ 的最小二乘解等同于求解正规方程 $A^T Ax = A^T b$。
+
+示例如下：
+
+```cpp
+MatrixXf A = MatrixXf::Random(3, 2);
+VectorXf b = VectorXf::Random(3);
+cout << "The solution using normal equations is:\n"
+     << (A.transpose() * A).ldlt().solve(A.transpose() * b) << endl;
+```
+
+输出：
+
+```
+The solution using normal equations is:
+-0.67
+0.314
+```
+
+这种方法通常是最快的，尤其是当 $A$ “又高又瘦”的时候。但是，即使矩阵 $A$ 有轻微病态，这也不是一个好方法，因为 $A^TA$ 的条件数是 $A$ 的条件数的平方。这意味着与上面提到的更稳定的方法相比，使用正规方程式会损失大约两倍的精度。
 
 
 
