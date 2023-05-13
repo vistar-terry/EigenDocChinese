@@ -612,6 +612,7 @@ Matrix<typename Scalar,
 代码示例：
 
 ```cpp
+// 代码索引 3-2-1-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -668,6 +669,7 @@ Now a =
 代码示例：
 
 ```cpp
+// 代码索引 3-2-2-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -728,6 +730,7 @@ for(int i = 0; i < 50; ++i)
 示例如下：
 
 ```cpp
+// 代码索引 3-2-3-1
 MatrixXcf a = MatrixXcf::Random(2,2);
 cout << "Here is the matrix a\n" << a << endl;
 
@@ -762,6 +765,7 @@ Here is the matrix a^*
 示例如下：
 
 ```cpp
+// 代码索引 3-2-3-2
 Matrix2i a; a << 1, 2, 3, 4;
 cout << "Here is the matrix a:\n" << a << endl;
  
@@ -787,6 +791,7 @@ and the result of the aliasing effect:
 示例如下：
 
 ```cpp
+// 代码索引 3-2-3-3
 MatrixXf a(2,3); a << 1, 2, 3, 4, 5, 6;
 cout << "Here is the initial matrix a:\n" << a << endl;
 
@@ -820,6 +825,7 @@ and after being transposed:
 示例如下：
 
 ```cpp
+// 代码索引 3-2-4-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -886,6 +892,7 @@ c.noalias() += a * b;
 示例如下：
 
 ```cpp
+// 代码索引 3-2-5-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -923,6 +930,7 @@ Eigen还提供了一些简单操作来将给定的矩阵或向量计算为标量
 示例如下：
 
 ```cpp
+// 代码索引 3-2-6-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -957,18 +965,19 @@ Here is mat.trace():     5
 也存在`minCoeff`和`maxCoeff`函数的变体，通过参数返回相应系数的坐标：
 
 ```cpp
-  Matrix3f m = Matrix3f::Random();
-  std::ptrdiff_t i, j;
-  float minOfM = m.minCoeff(&i,&j);
-  cout << "Here is the matrix m:\n" << m << endl;
-  cout << "Its minimum coefficient (" << minOfM 
-       << ") is at position (" << i << "," << j << ")\n\n";
- 
-  RowVector4i v = RowVector4i::Random();
-  int maxOfV = v.maxCoeff(&i);
-  cout << "Here is the vector v: " << v << endl;
-  cout << "Its maximum coefficient (" << maxOfV 
-       << ") is at position " << i << endl;
+// 代码索引 3-2-6-2
+Matrix3f m = Matrix3f::Random();
+std::ptrdiff_t i, j;
+float minOfM = m.minCoeff(&i,&j);
+cout << "Here is the matrix m:\n" << m << endl;
+cout << "Its minimum coefficient (" << minOfM 
+    << ") is at position (" << i << "," << j << ")\n\n";
+
+RowVector4i v = RowVector4i::Random();
+int maxOfV = v.maxCoeff(&i);
+cout << "Here is the vector v: " << v << endl;
+cout << "Its maximum coefficient (" << maxOfV 
+    << ") is at position " << i << endl;
 ```
 
 输出为：
