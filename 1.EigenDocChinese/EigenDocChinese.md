@@ -1824,6 +1824,7 @@ Initial vector v:
 示例如下：
 
 ```cpp
+// 代码索引 3-5-1-2
 Eigen::VectorXi v{{4,2,5,8,3}};
 cout << "Initial vector v:\n"
      << v << "\n\n";
@@ -1932,9 +1933,11 @@ A(lastN(n).reverse(), all)
 示例：
 
 ```cpp
+// 代码索引 3-5-2-1
 std::vector<int> ind{4,2,5,5,3};
 MatrixXi A = MatrixXi::Random(4,6);
 cout << "Initial matrix A:\n" << A << "\n\n";
+// 建议使用Eigen::all替换Eigen::placeholders::all，下同
 cout << "A(all,ind):\n" << A(Eigen::placeholders::all,ind) << "\n\n";
 ```
 
@@ -1958,6 +1961,7 @@ A(all,ind):
 
 
 ```cpp
+// 代码索引 3-5-2-2
 MatrixXi A = MatrixXi::Random(4,6);
 cout << "Initial matrix A:\n" << A << "\n\n";
 cout << "A(all,{4,2,5,5,3}):\n" << A(Eigen::placeholders::all,{4,2,5,5,3}) << "\n\n";
@@ -1982,6 +1986,7 @@ A(all,{4,2,5,5,3}):
 也可以传递一个表达式：
 
 ```cpp
+// 代码索引 3-5-2-3
 ArrayXi ind(5); ind<<4,2,5,5,3;
 MatrixXi A = MatrixXi::Random(4,6);
 cout << "Initial matrix A:\n" << A << "\n\n";
@@ -2019,6 +2024,7 @@ i = ind[i];
 这意味着可以构建自己的序列生成器并将其传递给operator()。下面是一个通过重复填充额外的第一行和列来扩大给定矩阵的示例：
 
 ```cpp
+// 代码索引 3-5-3-1
 struct pad {
   Index size() const { return out_size; }
   Index operator[] (Index i) const { return std::max<Index>(0,i-(out_size-in_size)); }
