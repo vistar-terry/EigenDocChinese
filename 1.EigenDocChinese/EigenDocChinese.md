@@ -1373,6 +1373,7 @@ Eigen的索引是以0开始的。
 以下程序使用动态大小和固定大小版本打印matrix中的几个块：
 
 ```cpp
+// 代码索引 3-4-1-1
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1420,6 +1421,7 @@ Block of size 3x3
 以下示例中进行了说明。此示例还演示了数组中的块，其工作方式与上面演示的矩阵中的块完全相同。
 
  ```cpp
+// 代码索引 3-4-1-2
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1479,6 +1481,7 @@ Here is now a with bottom-right 2x3 block copied into top-left 2x3 block:
 示例如下：
 
 ```cpp
+// 代码索引 3-4-2-1
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1538,6 +1541,7 @@ Eigen还对位于矩阵或数组的角或边的块提供了特殊方法，例如
 下面是一个简单的例子，描述了上面介绍的操作的使用：
 
 ```cpp
+// 代码索引 3-4-3-1
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1592,6 +1596,7 @@ Eigen提供了一组专门为向量和一维数组的特殊情况设计的块操
 示例如下：
 
 ```cpp
+// 代码索引 3-4-4-1
 #include <Eigen/Dense>
 #include <iostream>
  
