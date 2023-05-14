@@ -1064,6 +1064,7 @@ Eigen还提供了一些常见的类型定义，其方式类似于`Matrix`类型�
 例如：
 
 ```cpp
+// 代码索引 3-3-1-1
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1110,6 +1111,7 @@ int main()
 示例如下：
 
 ```cpp
+// 代码索引 3-3-2-1
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1155,6 +1157,7 @@ a - 2 =
 示例如下：
 
 ```cpp
+// 代码索引 3-3-3-1
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1185,6 +1188,7 @@ a * b =
 除了上述的加法、减法和乘法运算符之外，`Array` 类还定义了其他按系数计算的运算。例如，`abs()` 方法对每个元素取绝对值，而`sqrt()`计算每个系数的平方根。如果你有两个相同大小的数组，你可以调用`min(.)`来构造一个数组，其元素是两个给定数组对应元素的最小值。这些操作在以下示例中进行了说明：
 
 ```cpp
+// 代码索引 3-3-4-1
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1251,6 +1255,7 @@ Eigen 禁止在表达式中混合使用`Matrix` 和`Array`。例如，不能将`
 示例如下：
 
 ```cpp
+// 代码索引 3-3-5-1
 #include <Eigen/Dense>
 #include <iostream>
  
@@ -1307,6 +1312,7 @@ int main()
 示例如下：
 
 ```cpp
+// 代码索引 3-3-6-1
 #include <Eigen/Dense>
 #include <iostream>
  
