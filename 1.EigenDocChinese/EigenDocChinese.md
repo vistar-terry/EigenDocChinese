@@ -2064,6 +2064,7 @@ A(pad{3,N}, pad{3,N}):
 Eigen提供了一个逗号初始化语法，这让用户可以很容易的设置矩阵、向量、数组的系数。仅仅需要简单的列出系数，从左上角开始，从左到右，从上到下依次列出系数。初始化对象的大小需要提前指定，如果给的系数太多或太少，Eigen会报错，如下：
 
 ```cpp
+// 代码索引 3-6-1-1
 Matrix3f m;
 m << 1, 2, 3,
      4, 5, 6,
@@ -2082,6 +2083,7 @@ std::cout << m;
 此外，初始化列表的元素本身可以是向量或者矩阵。逗号就是把向量和矩阵连接起来。例如，下面是在指定向量大小后，连接两个向量（注意，必须先设置大小，然后才能使用逗号初始化）。
 
 ```cpp
+// 代码索引 3-6-1-2
 RowVectorXd vec1(3);
 vec1 << 1, 2, 3;
 std::cout << "vec1 = " << vec1 << std::endl;
@@ -2106,6 +2108,7 @@ joined =  1  2  3  1  4  9 16
 也可以使用同样的技术来初始化具有块结构的矩阵。
 
 ```cpp
+// 代码索引 3-6-1-3
 MatrixXf matA(2, 2);
 matA << 1, 2, 3, 4;
 MatrixXf matB(4, 4);
@@ -2125,6 +2128,7 @@ std::cout << matB << std::endl;
 逗号初始化同样也可以填充块表达式如`m.row(i)`，下面使用一个更加复杂的方式来实现第一个示例：
 
 ```cpp
+// 代码索引 3-6-1-4
 Matrix3f m;
 m.row(0) << 1, 2, 3;
 m.block(1,0,2,2) << 4, 5, 7, 8;
@@ -2149,6 +2153,7 @@ std::cout << m;
 共有三种重载，第一个重载不需要任何参数，仅可以用在固定大小的对象。如果想要一个动态大小的对象，需要指定大小。因此，第二个重载需要一个参数用来初始化一维动态对象。第三个重载，需要两个参数用来初始化二维对象的大小。所有的重载解释如下：
 
 ```cpp
+// 代码索引 3-6-2-1
 std::cout << "A fixed-size array:\n";
 Array33f a1 = Array33f::Zero();
 std::cout << a1 << "\n\n";
@@ -2192,6 +2197,7 @@ A two-dimensional dynamic-size array:
 方法`LinSpaced(size,low,high)`只对向量和一维数组有效，它产生一个指定大小在`low`和`high`的等差数列。下面的例子解释`LinSpaced()`，打印一个表格，包含角度和弧度的对应值，以及他们的`sin`和`cos`值。
 
 ```cpp
+// 代码索引 3-6-2-2
 ArrayXXf table(10, 4);
 table.col(0) = ArrayXf::LinSpaced(10, 0, 90);
 table.col(1) = M_PI / 180 * table.col(0);
@@ -2217,9 +2223,13 @@ Degrees   Radians      Sine    Cosine
        90      1.57         1 -4.37e-08
 ```
 
-此示例表明可以将像 `LinSpaced()` 这样的对象分配给变量（或表达式）。Eigen定义了诸如 [setZero()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#af230a143de50695d2d1fae93db7e4dcb)、[MatrixBase::setIdentity()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#a18e969adfdf2db4ac44c47fbdc854683) 和 [DenseBase::setLinSpaced()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a5d1ce9e801fa502e02b9b8cd9141ad0a) 之类的函数来执行此操作。下面的例子对比了三种方法来构造矩阵 $J = \begin{bmatrix} O & I \\ I & O \\ \end{bmatrix}$：
+此示例表明可以将像 `LinSpaced()` 这样的对象分配给变量（或表达式）。Eigen定义了诸如 [setZero()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#af230a143de50695d2d1fae93db7e4dcb)、[MatrixBase::setIdentity()](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html#a18e969adfdf2db4ac44c47fbdc854683) 和 [DenseBase::setLinSpaced()](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html#a5d1ce9e801fa502e02b9b8cd9141ad0a) 之类的函数来执行此操作。下面的例子对比了三种方法来构造矩阵：
+$$
+\begin{bmatrix} O & I \\ I & O \end{bmatrix}
+$$
 
 ```cpp
+// 代码索引 3-6-2-3
 const int size = 6;
 MatrixXd mat1(size, size);
 mat1.topLeftCorner(size/2, size/2)     = MatrixXd::Zero(size/2, size/2);
@@ -2275,6 +2285,7 @@ std::cout << mat3 << std::endl;
 这些表达式也可以用作临时对象。如下是 [入门](# 入门) 章节的第二个示例，其说明了这个特性：
 
 ```cpp
+// 代码索引 3-6-3-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -2310,6 +2321,7 @@ m * v =
 逗号初始化也可以构造临时对象，下面的例子构造了一个`2*3`的随机矩阵，然后与矩阵 $\begin{bmatrix} 0 & 1 \\ 1 & 0 \\ \end{bmatrix}$ 相乘。
 
 ```cpp
+// 代码索引 3-6-3-2
 MatrixXf mat = MatrixXf::Random(2, 3);
 std::cout << mat << std::endl << std::endl;
 mat = (MatrixXf(2,2) << 0, 1, 1, 0).finished() * mat;
