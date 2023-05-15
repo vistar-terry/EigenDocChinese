@@ -3292,7 +3292,9 @@ mat(2,2) = mat(1,1);  // 1
 一般来说，编译时无法检测到混叠。如果第一个例子中的 `mat` 大一点，那么块就不会重叠，也就不会出现混叠问题。然而，Eigen 有时可以检测到一些混叠实例，尽管是在运行时。在 [3.2 矩阵与向量运算](#3.2 矩阵与向量运算) 中提到了以下混叠的示例：
 
 ```cpp
-Matrix2i a; a << 1, 2, 3, 4;
+// 代码索引 3-11-2-1
+Matrix2i a; 
+a << 1, 2, 3, 4;
 cout << "Here is the matrix a:\n" << a << endl;
  
 a = a.transpose(); // !!! do NOT do this !!!
@@ -3329,7 +3331,9 @@ static void Eigen::internal::checkTransposeAliasing_impl<Derived, OtherDerived, 
 ```cpp
 // 代码索引 3-11-1-2
 MatrixXi mat(3,3); 
-mat << 1, 2, 3,   4, 5, 6,   7, 8, 9;
+mat << 1, 2, 3,   
+	   4, 5, 6,   
+       7, 8, 9;
 cout << "Here is the matrix mat:\n" << mat << endl;
  
 // The eval() solves the aliasing problem
@@ -3355,7 +3359,9 @@ After the assignment, mat =
 同样的解决方案也适用于第二个示例，使用转置：只需使用 `a = a.transpose().eval();` 替换 `a = a.transpose();` 即可。但是，在这种常见情况下，有更好的解决方案。Eigen 提供了专用函数 `transposeInPlace()` ，它用矩阵的转置替换矩阵。如下所示：
 
 ```cpp
-MatrixXf a(2,3); a << 1, 2, 3, 4, 5, 6;
+// 代码索引 3-11-2-2
+MatrixXf a(2,3); 
+a << 1, 2, 3, 4, 5, 6;
 cout << "Here is the initial matrix a:\n" << a << endl;
 
 a.transposeInPlace();
@@ -3451,8 +3457,10 @@ Doing everything at once yields
 在目标矩阵未调整大小的情况下，矩阵乘法是 Eigen 中唯一默认有混叠问题的运算。但是，如果 `matA` 是一个方阵，那么语句 `matA = matA * matA;` 是安全的。Eigen 中所有其他操作都假设没有混叠问题，因为结果被分配给另一个不同的矩阵，或与组件运算是相容的。
 
 ```cpp
+// 代码索引 3-11-4-1
 MatrixXf matA(2,2); 
-matA << 2, 0,  0, 2;
+matA << 2, 0,  
+		0, 2;
 matA = matA * matA;
 cout << matA;
 ```
@@ -3469,8 +3477,10 @@ cout << matA;
 用户可以使用 `noalias()` 函数声明当前没有混叠问题以提高效率，例如：`matB.noalias() = matA * matA`。这告诉 Eigen 将矩阵乘积 `matA * matA` 直接赋值给 `matB`。
 
 ```cpp
+// 代码索引 3-11-4-2
 MatrixXf matA(2,2), matB(2,2); 
-matA << 2, 0,  0, 2;
+matA << 2, 0,  
+		0, 2;
  
 // Simple but not quite as efficient
 matB = matA * matA;
@@ -3494,9 +3504,13 @@ cout << matB;
 当然，当实际上发生混叠问题时，不应该使用 `noalias()` 。如果这样做，可能会得到错误的结果：
 
 ```cpp
+// 代码索引 3-11-4-3
 MatrixXf A(2,2), B(3,2);
-B << 2, 0,  0, 3, 1, 1;
-A << 2, 0, 0, -2;
+B << 2, 0,
+     0, 3,
+     1, 1;
+A << 2, 0,
+     0, -2;
 A = (B * A).cwiseAbs();
 cout << A;
 ```
@@ -3512,6 +3526,7 @@ cout << A;
 对于任何混叠问题，可以通过在赋值之前显式计算表达式来解决它：
 
 ```cpp
+// 代码索引 3-11-4-4
 MatrixXf A(2,2), B(3,2);
 B << 2, 0,  0, 3, 1, 1;
 A << 2, 0, 0, -2;
