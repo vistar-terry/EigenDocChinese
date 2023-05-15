@@ -3582,6 +3582,7 @@ $$
 此示例由以下Eigen代码说明。它使用 `PlainObjectBase::data()` 函数，该函数返回指向矩阵第一个元素的指针。
 
 ```cpp
+// 代码索引 3-12-1-1
 Matrix<int, 3, 4, ColMajor> Acolmajor;
 Acolmajor << 8, 2, 2, 9,
              9, 1, 4, 4,
