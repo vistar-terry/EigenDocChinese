@@ -4796,13 +4796,38 @@ The solution using normal equations is:
 
 
 
-
-
-
-
-
-
 ##  4.4 就地矩阵分解
+
+[英文原文(Inplace matrix decompositions)](http://eigen.tuxfamily.org/dox/group__InplaceDecomposition.html)
+
+从 Eigen 3.3 开始，`LU`、`Cholesky` 和 `QR` 分解可以就地操作，即直接在给定的输入矩阵内操作。当处理大矩阵时，或者当可用内存非常有限（嵌入式系统）时，此功能特别有用。
+
+为此，必须使用 `Ref<>` 矩阵类型实例化相应的分解类，并且必须使用输入矩阵作为参数构造分解对象。作为一个例子，让我们考虑一个带有部分旋转的就地 LU 分解。
+
+声明一个 `2x2` 矩阵 A：
+
+```cpp
+ Eigen::MatrixXd A(2,2); 
+ A << 2, -1, 
+      1, 3;
+ std::cout << "Here is the input matrix A before decomposition:\n" << A << "\n";
+```
+
+输出：
+
+```
+Here is the input matrix A before decomposition:
+ 2 -1
+ 1  3
+```
+
+
+
+
+
+
+
+
 
 
 
