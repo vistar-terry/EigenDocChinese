@@ -4398,6 +4398,7 @@ The relative error is:
 特征值和特征向量的计算不一定收敛，但这种不收敛的情况很少见。可以调用 `info()` 检查这种可能性。
 
 ```cpp
+// 代码索引 4-1-5-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -4443,7 +4444,7 @@ corresponding to these eigenvalues:
 示例如下：
 
 ```cpp
-// 代码索引 4-1-5-1
+// 代码索引 4-1-6-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -4487,6 +4488,7 @@ The inverse of A is:
 示例如下：
 
 ```cpp
+// 代码索引 4-1-7-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -4550,6 +4552,7 @@ qr.compute(A); // no dynamic memory allocation
 可以计算秩的分解至少提供了一个 `rank()` 方法。还有更简单的方法，例如 `isInvertible()`，有些还提供计算矩阵的核（零空间）和图像（列空间）的方法，例如 `FullPivLU`：
 
 ```cpp
+// 代码索引 4-1-8-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -4590,6 +4593,7 @@ Here is a matrix whose columns form a basis of the column-space of A:
 当然，任何秩计算都取决于阈值的选择，因为实际上没有任何浮点矩阵是秩亏的。Eigen 根据不同分解选择一个合理的默认阈值，但通常是对角线大小乘以机器浮点精度。虽然这是 Eigen 可以选择的最佳默认值，但只有用户知道应用程序的正确阈值是多少。用户可以通过在调用 `rank()` 或其他需要使用此类阈值的方法之前对分解对象调用 `setThreshold()` 来设置自定义阈值。分解本身，即 `compute()` 方法，与阈值无关。更改阈值后无需重新计算分解。
 
 ```cpp
+// 代码索引 4-1-8-2
 #include <iostream>
 #include <Eigen/Dense>
  
