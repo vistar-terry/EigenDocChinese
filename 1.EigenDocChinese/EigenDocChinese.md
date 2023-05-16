@@ -4216,6 +4216,7 @@ $$
 **解**：可以根据矩阵 $$A$$ 的属性以及效率和准确性，在各种分解之间进行选择。如下是一个很好的折衷方案：
 
 ```cpp
+// 代码索引 4-1-1-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -4235,7 +4236,6 @@ int main()
 输出如下：
 
 ```
-	
 Here is the matrix A:
  1  2  3
  4  5  6
@@ -4283,6 +4283,7 @@ Vector3f x = dec.solve(b);
 示例如下：
 
 ```cpp
+// 代码索引 4-1-2-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -4323,6 +4324,7 @@ The solution is:
 示例如下：
 
 ```cpp
+// 代码索引 4-1-3-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -4333,7 +4335,7 @@ int main()
    Eigen::VectorXf b = Eigen::VectorXf::Random(3);
    std::cout << "Here is the right hand side b:\n" << b << std::endl;
    std::cout << "The least-squares solution is:\n"
-        << A.template bdcSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(b) << std::endl;
+        << A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b) << std::endl;
 }
 ```
 
@@ -4364,6 +4366,7 @@ The least-squares solution is:
 Eigen 允许根据具体的误差自己进行此计算，如本例所示：
 
 ```cpp
+// 代码索引 4-1-4-1
 #include <iostream>
 #include <Eigen/Dense>
  
@@ -4399,6 +4402,7 @@ The relative error is:
 示例如下：
 
 ```cpp
+// 代码索引 4-1-5-1
 #include <iostream>
 #include <Eigen/Dense>
  
