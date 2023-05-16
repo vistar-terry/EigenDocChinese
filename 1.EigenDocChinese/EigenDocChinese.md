@@ -4393,6 +4393,47 @@ The relative error is:
 
 ### 计算特征值和特征向量
 
+这里需要使用一个特征分解，以检查矩阵是否自伴。如下示例使用 [SelfAdjointEigenSolver ](http://eigen.tuxfamily.org/dox/classEigen_1_1SelfAdjointEigenSolver.html)，它可以很容易地处理使用 [EigenSolver](http://eigen.tuxfamily.org/dox/classEigen_1_1EigenSolver.html) 或 [ComplexEigenSolver 的](http://eigen.tuxfamily.org/dox/classEigen_1_1ComplexEigenSolver.html) 的一般矩阵。
+
+特征值和特征向量的计算不一定收敛，但这种不收敛的情况很少见。可以调用 `info()` 检查这种可能性。
+
+```cpp
+#include <iostream>
+#include <Eigen/Dense>
+ 
+int main()
+{
+   Eigen::Matrix2f A;
+   A << 1, 2, 2, 3;
+   std::cout << "Here is the matrix A:\n" << A << std::endl;
+   Eigen::SelfAdjointEigenSolver<Eigen::Matrix2f> eigensolver(A);
+   if (eigensolver.info() != Eigen::Success) abort();
+   std::cout << "The eigenvalues of A are:\n" << eigensolver.eigenvalues() << std::endl;
+   std::cout << "Here's a matrix whose columns are eigenvectors of A \n"
+        << "corresponding to these eigenvalues:\n"
+        << eigensolver.eigenvectors() << std::endl;
+}
+```
+
+输出如下：
+
+```
+Here is the matrix A:
+1 2
+2 3
+The eigenvalues of A are:
+-0.236
+  4.24
+Here's a matrix whose columns are eigenvectors of A 
+corresponding to these eigenvalues:
+-0.851 -0.526
+ 0.526 -0.851
+```
+
+
+
+### 计算逆和行列式
+
 虽然逆和行列式是基本的数学概念，但在数值线性代数中它们不如在纯数学中有用。逆计算通常被 `solve()` 操作有利地取代，行列式通常不是检查矩阵是否可逆的好方法。
 
 但是，对于非常小的矩阵，上述情况可能并非如此，逆矩阵和行列式可能非常有用。
