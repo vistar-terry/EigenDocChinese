@@ -4821,6 +4821,58 @@ Here is the input matrix A before decomposition:
  1  3
 ```
 
+然后，声明就地 `LU` 分解对象 `lu`，并检查矩阵 `A` 的内容：
+
+```cpp
+Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXd> > lu(A);
+std::cout << "Here is the input matrix A after decomposition:\n" << A << "\n";
+```
+
+输出：
+
+```
+Here is the input matrix A after decomposition:
+  2  -1
+0.5 3.5
+```
+
+在这里，`lu` 对象计算 `L` 和 `U` 因子并将其存储在矩阵 `A` 所持有的内存中。`A` 的系数在分解过程中被破坏，并由 `L` 和 `U` 因子代替，可以验证：
+
+```cpp
+std::cout << "Here is the matrix storing the L and U factors:\n" << lu.matrixLU() << "\n";
+```
+
+输出：
+
+```
+Here is the matrix storing the L and U factors:
+  2  -1
+0.5 3.5
+```
+
+然后，可以使用 `lu` 对象，例如解决 $Ax=b$ 问题：
+
+```cpp
+Eigen::MatrixXd A0(2,2); A0 << 2, -1, 1, 3;
+Eigen::VectorXd b(2);    b << 1, 2;
+Eigen::VectorXd x = lu.solve(b);
+std::cout << "Residual: " << (A0 * x - b).norm() << "\n";
+```
+
+输出：
+
+```
+Residual: 0
+```
+
+
+
+
+
+
+
+
+
 
 
 
