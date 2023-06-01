@@ -4941,6 +4941,51 @@ Residual: 2.48253e-16
 
 ## 4.5 密集分解的基准
 
+[英文原文(Benchmark of dense decompositions)](http://eigen.tuxfamily.org/dox/group__DenseDecompositionBenchmark.html)
+
+本页介绍了 Eigen 为各种方阵和过约束问题提供的密集矩阵分解的速度比较。
+
+有关线性求解器、分解的特征和数值鲁棒性的更一般概述，请查看 [此表](http://eigen.tuxfamily.org/dox/group__TopicLinearAlgebraDecompositions.html)。
+
+该基准测试已在配备英特尔酷睿 i7 @ 2.6 GHz 的笔记本电脑上运行，并使用启用了 AVX 和 FMA 指令集但没有多线程的 clang 进行编译。使用单精度浮点数，对于 `double`，可以通过将时间乘以一个因子 `2` 来得到一个很好的估计。
+
+方阵是对称的，对于过约束矩阵，测试报告的时间包括计算对称协方差矩阵 $A^TA$ 的成本，对于前四个基于 Cholesky 和 LU 的求解器，用符号 ***** 表示（表的右上角部分）。计时以毫秒为单位，因素与[LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html)分解有关， LLT分解速度最快，但也是最不通用和鲁棒的。
+
+![屏幕截图 2023-06-01 231235](img/屏幕截图 2023-06-01 231235.png)
+
+***** : 此分解不支持对过度约束问题的直接最小二乘求解，并且报告的时间包括计算对称协方差矩阵 $A^TA$ 的成本。
+
+**总结：**
+
+- [LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html)始终是最快的求解器。
+- 对于很大程度上过度约束的问题，Cholesky/LU 分解的成本主要由对称协方差矩阵的计算决定。
+- 对于大型问题，只有实现缓存友好阻塞策略的分解才能很好地扩展。包括[LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html)、[PartialPivLU](http://eigen.tuxfamily.org/dox/classEigen_1_1PartialPivLU.html)、[HouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1HouseholderQR.html)和[BDCSVD](http://eigen.tuxfamily.org/dox/classEigen_1_1BDCSVD.html)。这解释了为什么对于 `4k x 4k` 矩阵，[HouseholderQR比](http://eigen.tuxfamily.org/dox/classEigen_1_1HouseholderQR.html)[LDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LDLT.html)更快。后面的Eigen版本，[LDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LDLT.html)和[ColPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1ColPivHouseholderQR.html)也会实现缓存友好阻塞策略。
+- [CompleteOrthogonalDecomposition](http://eigen.tuxfamily.org/dox/classEigen_1_1CompleteOrthogonalDecomposition.html)基于[ColPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1ColPivHouseholderQR.html)，因此它们达到了相同的性能水平。
+
+上表由 [bench/dense_solvers.cpp](https://gitlab.com/libeigen/eigen/raw/master/bench/dense_solvers.cpp) 文件生成，可以随意修改它以生成与你的硬件、编译器和问题大小相匹配的表格。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
