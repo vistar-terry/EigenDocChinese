@@ -4865,23 +4865,77 @@ std::cout << "Residual: " << (A0 * x - b).norm() << "\n";
 Residual: 0
 ```
 
+由于`A`和`lu`共享内存，修改矩阵`A`将使`lu`无效。可以通过修改内容`A`并再次尝试解决初始问题来轻松验证：
 
+```cpp
+A << 3, 4, -2, 1;
+x = lu.solve(b);
+std::cout << "Residual: " << (A0 * x - b).norm() << "\n";
+```
 
+输出：
 
+```
+Residual: 15.8114
+```
 
+请注意，这里没有共享指针，用户需要使输入矩阵 `A` 和 `lu` 保持相同的生命周期。
 
+如果想用修改后的 A 更新因式分解，则必须像往常一样调用  `compute`  方法：
 
+```cpp
+A0 = A; // save A
+lu.compute(A);
+x = lu.solve(b);
+std::cout << "Residual: " << (A0 * x - b).norm() << "\n";
+```
 
+输出：
 
+```
+Residual: 0
+```
 
+请注意，调用 `compute` 不会更改 `lu` 对象引用的内存。因此，如果使用不同于 `A` 的另一个矩阵 `A1` 调用  `compute`  方法，则不会修改 `A1` 的内容。这仍然是 A 的内容，它将用于存储矩阵 A1 的 L 和 U 因子。验证如下：
 
+```cpp
+Eigen::MatrixXd A1(2,2);
+A1 << 5,-2,3,4;
+lu.compute(A1);
+std::cout << "Here is the input matrix A1 after decomposition:\n" << A1 << "\n";
+```
 
+输出：
 
+```
+Here is the input matrix A1 after decomposition:
+ 5 -2
+ 3  4
+```
 
+矩阵 `A1` 没有改变，并且可以求解 $A1*x=b$，也可以不复制 `A1` 直接求得残差：
 
+```cpp
+x = lu.solve(b);
+std::cout << "Residual: " << (A1 * x - b).norm() << "\n";
+```
 
+输出：
 
+```
+Residual: 2.48253e-16
+```
 
+以下是支持这种就地机制的矩阵分解列表：
+
+- class [LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html)
+- class [LDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LDLT.html)
+- class [PartialPivLU](http://eigen.tuxfamily.org/dox/classEigen_1_1PartialPivLU.html)
+- class [FullPivLU](http://eigen.tuxfamily.org/dox/classEigen_1_1FullPivLU.html)
+- class [HouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1HouseholderQR.html)
+- class [ColPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1ColPivHouseholderQR.html)
+- class [FullPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1FullPivHouseholderQR.html)
+- class [CompleteOrthogonalDecomposition](http://eigen.tuxfamily.org/dox/classEigen_1_1CompleteOrthogonalDecomposition.html)
 
 
 
