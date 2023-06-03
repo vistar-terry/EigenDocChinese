@@ -4211,9 +4211,9 @@ __attribute__((force_align_arg_pointer)) void foo()
 $$
 Ax = b
 $$
-其中 $$A$$ 和 $$b$$ 是矩阵（作为一种特殊情况，$$b$$ 也可以是一个向量）。求解 $$x$$。
+其中 $A$ 和 $b$ 是矩阵（作为一种特殊情况，$b$ 也可以是一个向量）。求解 $x$。
 
-**解**：可以根据矩阵 $$A$$ 的属性以及效率和准确性，在各种分解之间进行选择。如下是一个很好的折衷方案：
+**解**：可以根据矩阵 $A$ 的属性以及效率和准确性，在各种分解之间进行选择。如下是一个很好的折衷方案：
 
 ```cpp
 // 代码索引 4-1-1-1
@@ -4796,31 +4796,359 @@ The solution using normal equations is:
 
 
 
-
-
-
-
-
-
 ##  4.4 就地矩阵分解
 
+[英文原文(Inplace matrix decompositions)](http://eigen.tuxfamily.org/dox/group__InplaceDecomposition.html)
 
+从 Eigen 3.3 开始，`LU`、`Cholesky` 和 `QR` 分解可以就地操作，即直接在给定的输入矩阵内操作。当处理大矩阵时，或者当可用内存非常有限（嵌入式系统）时，此功能特别有用。
+
+为此，必须使用 `Ref<>` 矩阵类型实例化相应的分解类，并且必须使用输入矩阵作为参数构造分解对象。作为一个例子，让我们考虑一个带有部分旋转的就地 LU 分解。
+
+声明一个 `2x2` 矩阵 A：
+
+```cpp
+ Eigen::MatrixXd A(2,2); 
+ A << 2, -1, 
+      1, 3;
+ std::cout << "Here is the input matrix A before decomposition:\n" << A << "\n";
+```
+
+输出：
+
+```
+Here is the input matrix A before decomposition:
+ 2 -1
+ 1  3
+```
+
+然后，声明就地 `LU` 分解对象 `lu`，并检查矩阵 `A` 的内容：
+
+```cpp
+Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXd> > lu(A);
+std::cout << "Here is the input matrix A after decomposition:\n" << A << "\n";
+```
+
+输出：
+
+```
+Here is the input matrix A after decomposition:
+  2  -1
+0.5 3.5
+```
+
+在这里，`lu` 对象计算 `L` 和 `U` 因子并将其存储在矩阵 `A` 所持有的内存中。`A` 的系数在分解过程中被破坏，并由 `L` 和 `U` 因子代替，可以验证：
+
+```cpp
+std::cout << "Here is the matrix storing the L and U factors:\n" << lu.matrixLU() << "\n";
+```
+
+输出：
+
+```
+Here is the matrix storing the L and U factors:
+  2  -1
+0.5 3.5
+```
+
+然后，可以使用 `lu` 对象，例如解决 $Ax=b$ 问题：
+
+```cpp
+Eigen::MatrixXd A0(2,2); A0 << 2, -1, 1, 3;
+Eigen::VectorXd b(2);    b << 1, 2;
+Eigen::VectorXd x = lu.solve(b);
+std::cout << "Residual: " << (A0 * x - b).norm() << "\n";
+```
+
+输出：
+
+```
+Residual: 0
+```
+
+由于`A`和`lu`共享内存，修改矩阵`A`将使`lu`无效。可以通过修改内容`A`并再次尝试解决初始问题来轻松验证：
+
+```cpp
+A << 3, 4, -2, 1;
+x = lu.solve(b);
+std::cout << "Residual: " << (A0 * x - b).norm() << "\n";
+```
+
+输出：
+
+```
+Residual: 15.8114
+```
+
+请注意，这里没有共享指针，用户需要使输入矩阵 `A` 和 `lu` 保持相同的生命周期。
+
+如果想用修改后的 A 更新因式分解，则必须像往常一样调用  `compute`  方法：
+
+```cpp
+A0 = A; // save A
+lu.compute(A);
+x = lu.solve(b);
+std::cout << "Residual: " << (A0 * x - b).norm() << "\n";
+```
+
+输出：
+
+```
+Residual: 0
+```
+
+请注意，调用 `compute` 不会更改 `lu` 对象引用的内存。因此，如果使用不同于 `A` 的另一个矩阵 `A1` 调用  `compute`  方法，则不会修改 `A1` 的内容。这仍然是 A 的内容，它将用于存储矩阵 A1 的 L 和 U 因子。验证如下：
+
+```cpp
+Eigen::MatrixXd A1(2,2);
+A1 << 5,-2,3,4;
+lu.compute(A1);
+std::cout << "Here is the input matrix A1 after decomposition:\n" << A1 << "\n";
+```
+
+输出：
+
+```
+Here is the input matrix A1 after decomposition:
+ 5 -2
+ 3  4
+```
+
+矩阵 `A1` 没有改变，并且可以求解 $A1*x=b$，也可以不复制 `A1` 直接求得残差：
+
+```cpp
+x = lu.solve(b);
+std::cout << "Residual: " << (A1 * x - b).norm() << "\n";
+```
+
+输出：
+
+```
+Residual: 2.48253e-16
+```
+
+以下是支持这种就地机制的矩阵分解列表：
+
+- class [LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html)
+- class [LDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LDLT.html)
+- class [PartialPivLU](http://eigen.tuxfamily.org/dox/classEigen_1_1PartialPivLU.html)
+- class [FullPivLU](http://eigen.tuxfamily.org/dox/classEigen_1_1FullPivLU.html)
+- class [HouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1HouseholderQR.html)
+- class [ColPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1ColPivHouseholderQR.html)
+- class [FullPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1FullPivHouseholderQR.html)
+- class [CompleteOrthogonalDecomposition](http://eigen.tuxfamily.org/dox/classEigen_1_1CompleteOrthogonalDecomposition.html)
 
 
 
 ## 4.5 密集分解的基准
 
+[英文原文(Benchmark of dense decompositions)](http://eigen.tuxfamily.org/dox/group__DenseDecompositionBenchmark.html)
 
+本页介绍了 Eigen 为各种方阵和过约束问题提供的密集矩阵分解的速度比较。
 
+有关线性求解器、分解的特征和数值鲁棒性的更一般概述，请查看 [此表](http://eigen.tuxfamily.org/dox/group__TopicLinearAlgebraDecompositions.html)。
 
+该基准测试已在配备英特尔酷睿 i7 @ 2.6 GHz 的笔记本电脑上运行，并使用启用了 AVX 和 FMA 指令集但没有多线程的 clang 进行编译。使用单精度浮点数，对于 `double`，可以通过将时间乘以一个因子 `2` 来得到一个很好的估计。
 
+方阵是对称的，对于过约束矩阵，测试报告的时间包括计算对称协方差矩阵 $A^TA$ 的成本，对于前四个基于 Cholesky 和 LU 的求解器，用符号 ***** 表示（表的右上角部分）。计时以毫秒为单位，因素与[LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html)分解有关， LLT分解速度最快，但也是最不通用和鲁棒的。
 
+![屏幕截图 2023-06-01 231235](img/屏幕截图 2023-06-01 231235.png)
+
+***** : 此分解不支持对过度约束问题的直接最小二乘求解，并且报告的时间包括计算对称协方差矩阵 $A^TA$ 的成本。
+
+**总结：**
+
+- [LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html)始终是最快的求解器。
+- 对于很大程度上过度约束的问题，Cholesky/LU 分解的成本主要由对称协方差矩阵的计算决定。
+- 对于大型问题，只有实现缓存友好阻塞策略的分解才能很好地扩展。包括[LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html)、[PartialPivLU](http://eigen.tuxfamily.org/dox/classEigen_1_1PartialPivLU.html)、[HouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1HouseholderQR.html)和[BDCSVD](http://eigen.tuxfamily.org/dox/classEigen_1_1BDCSVD.html)。这解释了为什么对于 `4k x 4k` 矩阵，[HouseholderQR比](http://eigen.tuxfamily.org/dox/classEigen_1_1HouseholderQR.html)[LDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LDLT.html)更快。后面的Eigen版本，[LDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LDLT.html)和[ColPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1ColPivHouseholderQR.html)也会实现缓存友好阻塞策略。
+- [CompleteOrthogonalDecomposition](http://eigen.tuxfamily.org/dox/classEigen_1_1CompleteOrthogonalDecomposition.html)基于[ColPivHouseholderQR](http://eigen.tuxfamily.org/dox/classEigen_1_1ColPivHouseholderQR.html)，因此它们达到了相同的性能水平。
+
+上表由 [bench/dense_solvers.cpp](https://gitlab.com/libeigen/eigen/raw/master/bench/dense_solvers.cpp) 文件生成，可以随意修改它以生成与你的硬件、编译器和问题大小相匹配的表格。
 
 
 
 # 五、稀疏线性代数
 
 ## 5.1 稀疏矩阵操作
+
+[英文原文(Sparse matrix manipulations)](http://eigen.tuxfamily.org/dox/group__TutorialSparse.html)
+
+处理和解决稀疏问题涉及各种模块，总结如下：
+
+| 模块                                                         | 头文件                                  | 内容                                                         |
+| ------------------------------------------------------------ | --------------------------------------- | ------------------------------------------------------------ |
+| [SparseCore](http://eigen.tuxfamily.org/dox/group__SparseCore__Module.html) | \#include<Eigen/SparseCore>             | [SparseMatrix](http://eigen.tuxfamily.org/dox/classEigen_1_1SparseMatrix.html)和[SparseVector](http://eigen.tuxfamily.org/dox/classEigen_1_1SparseVector.html)类、矩阵集合、基本稀疏线性代数（包括稀疏三角求解器） |
+| [SparseCholesky](http://eigen.tuxfamily.org/dox/group__SparseCholesky__Module.html) | \#include<Eigen/SparseCholesky>         | 直接稀疏[LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html)和[LDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LDLT.html) Cholesky 分解，解决稀疏自伴随正定问题 |
+| [SparseLU](http://eigen.tuxfamily.org/dox/group__SparseLU__Module.html) | \#include<Eigen/SparseLU>               | 求解一般方形稀疏系统的稀疏 LU 分解                           |
+| [SparseQR](http://eigen.tuxfamily.org/dox/group__SparseQR__Module.html) | \#include<Eigen/SparseQR>               | 用于解决稀疏线性最小二乘问题的稀疏 QR 分解                   |
+| [IterativeLinearSolvers](http://eigen.tuxfamily.org/dox/group__IterativeLinearSolvers__Module.html) | \#include<Eigen/IterativeLinearSolvers> | 解决大型一般线性平方问题（包括自伴随正定问题）的迭代求解器   |
+| [Sparse](http://eigen.tuxfamily.org/dox/group__Sparse__Module.html) | \#include<Eigen/Sparse>                 | 包含以上所有模块                                             |
+
+
+
+### 稀疏矩阵格式
+
+在许多应用中（例如，有限元方法），通常要处理非常大的矩阵，其中只有少数系数不为零。在这种情况下，可以通过使用仅存储非零系数的特殊表示来减少内存消耗并提高性能。这样的矩阵称为稀疏矩阵。
+
+#### SparseMatrix 类
+
+类 `SparseMatrix` 是 Eigen 的稀疏模块的主要稀疏矩阵表示；它提供高性能和低内存使用率。它实现了广泛使用的压缩列（或行）存储方案的更通用变体。 它由四个紧凑数组组成：
+
+- Values：存储非零的系数值。
+- InnerIndices：存储非零系数的行（或列）索引。
+- OuterStarts：存储每一列（或行）第一个非零系数在前两个数组中的索引，最后一个元素为前两个数组的大小。
+- InnerNNZs：存储每列（或行）的非零系数个数。
+
+其中，`Inner` 指的是内部向量，它是列主矩阵的列，或行主矩阵的行。`Outer` 指的是另一个方向。
+
+如下例子中更好的解释了这个存储方案：
+
+有矩阵：
+$$
+\begin{bmatrix} 0&3&0&0&0 \\ 22&0&0&0&17 \\ 7&5&0&1&0 \\ 0&0&0&0&0 \\ 0&0&14&0&8 \\ \end{bmatrix}
+$$
+其可能的稀疏列主元表示之一为：
+
+```
+Values:			22	7	_	3	5	14	_	_	1	_	17	8
+InnerIndices:	1	2	_	0	2	4	_	_	2	_	1	4
+OuterStarts:	0	3	5	8	10	12
+InnerNNZs:		2	2	1	1	2	
+```
+
+目前，保证给定内部向量的元素始终按递增的内部索引排序。`_ ` 表示可用于快速插入新元素的可用空间。假设不需要重新分配，随机元素的插入复杂度为 `O(nnz_j)` ，其中 `nnz_j` 是相应内部向量的非零系数个数。另一方面，在给定的内部向量中插入具有递增内部索引的元素效率更高，因为这只需要增加相应的 `InnerNNZs` 条目，这是一个 `O(1)` 操作。
+
+没有可用空间的情况是一种特殊情况，称为压缩模式。它对应于广泛使用的压缩列（或行）存储方案（CCS 或 CRS）。任何 `SparseMatrix` 对象都可以通过调用 `SparseMatrix::makeCompressed()` 函数转换为这种形式。在这种情况下，可以注意到 `InnerNNZs` 数组与 `OuterStarts` 是冗余的，因为有等式：`InnerNNZs[j] == OuterStarts[j+1] - OuterStarts[j]`。因此，实际上调用 `SparseMatrix::makeCompressed()` 会释放这个缓冲区。
+
+值得注意的是，Eigen 对外部库的大多数包装器都需要压缩矩阵作为输入。
+
+Eigen 运算的结果总是产生压缩的稀疏矩阵。另一方面，将新元素插入 `SparseMatrix` 会将其转换为未压缩模式。
+
+这是先前以压缩模式表示的矩阵：
+
+```
+Values:			22	7	3	5	14	1	17	8
+InnerIndices:	1	2	0	2	4	2	1	4
+OuterStarts:	0	2	4	5	6	8
+```
+
+`SparseVector` 是 `SparseMatrix` 的特例，其中仅存储 `Values` 和 `InnerIndices` 数组。`SparseVector` 没有压缩/未压缩模式的概念。
+
+
+
+### 第一个示例
+
+在描述每个单独的类之前，让我们从以下典型示例开始：使用有限差分格式和 `Dirichlet` 边界条件在规则二维网格上求解拉普拉斯方程 $Δu=0$ 。这样的问题可以在数学上表示为以下形式的线性问题，$Ax = b$，其中 $x$ 是大小为 $m$ 的未知向量（在我们的例子中，是像素的值），$b$ 是由边界条件产生的右侧矢量，并且 $A$ 是一个大小为 $m*m$ 由拉普拉斯算子离散化产生的仅包含少数非零元素的矩阵。
+
+示例代码如下：
+
+```cpp
+#include <Eigen/Sparse>
+#include <vector>
+#include <iostream>
+ 
+typedef Eigen::SparseMatrix<double> SpMat; // declares a column-major sparse matrix type of double
+typedef Eigen::Triplet<double> T;
+ 
+void buildProblem(std::vector<T>& coefficients, Eigen::VectorXd& b, int n);
+void saveAsBitmap(const Eigen::VectorXd& x, int n, const char* filename);
+ 
+int main(int argc, char** argv)
+{
+  if(argc!=2) 
+  {
+    std::cerr << "Error: expected one and only one argument.\n";
+    return -1;
+  }
+  
+  int n = 300;  // size of the image
+  int m = n*n;  // number of unknowns (=number of pixels)
+ 
+  // Assembly:
+  std::vector<T> coefficients;            // list of non-zeros coefficients
+  Eigen::VectorXd b(m);                   // the right hand side-vector resulting from the constraints
+  buildProblem(coefficients, b, n);
+ 
+  SpMat A(m,m);
+  A.setFromTriplets(coefficients.begin(), coefficients.end());
+ 
+  // Solving:
+  Eigen::SimplicialCholesky<SpMat> chol(A); // performs a Cholesky factorization of A
+  Eigen::VectorXd x = chol.solve(b);        // use the factorization to solve for the given right hand side
+ 
+  // Export the result to a file:
+  saveAsBitmap(x, n, argv[1]);
+ 
+  return 0;
+}
+```
+
+在此示例中，首先定义 `double SparseMatrix<double>` 的列优先稀疏矩阵类型，以及相同标量类型 `Triplet<double>` 的三元组列表。三元组是将非零条目表示为三元组的简单对象：行索引、列索引、值。
+
+在 main 函数中，我们声明了一个三元组系数列表（作为标准矢量）和由 `buildProblem` 函数填充的右侧矢量 `b`。然后将非零系数的原始和平面列表转换为真正的 `SparseMatrix` 对象 `A`。请注意，列表的元素不必排序，可能的重复系数将被合并。 
+
+最后一步是有效地解决组装的问题。由于生成的矩阵 `A` 在结构上是对称的，可以通过 `SimplicialLDLT` 类执行直接的 `Cholesky` 分解，该类的行为类似于密集对象的 `LDLT` 对应操作。
+
+生成的向量 `x` 包含作为一维数组的像素值，该数组保存到如下图所示的 `jpeg` 文件中。
+
+![1.First_example](img/1.First_example-1685806283722-2.jpeg)
+
+
+
+`buildProblem` 和 `saveAsBitmap` 函数超出了本教程的范围。出于好奇和可重复性的目的，可在[这里](http://eigen.tuxfamily.org/dox/TutorialSparse_example_details.html)下载。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
