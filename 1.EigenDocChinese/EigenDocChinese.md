@@ -4211,9 +4211,9 @@ __attribute__((force_align_arg_pointer)) void foo()
 $$
 Ax = b
 $$
-其中 $$A$$ 和 $$b$$ 是矩阵（作为一种特殊情况，$$b$$ 也可以是一个向量）。求解 $$x$$。
+其中 $A$ 和 $b$ 是矩阵（作为一种特殊情况，$b$ 也可以是一个向量）。求解 $x$。
 
-**解**：可以根据矩阵 $$A$$ 的属性以及效率和准确性，在各种分解之间进行选择。如下是一个很好的折衷方案：
+**解**：可以根据矩阵 $A$ 的属性以及效率和准确性，在各种分解之间进行选择。如下是一个很好的折衷方案：
 
 ```cpp
 // 代码索引 4-1-1-1
@@ -4966,37 +4966,189 @@ Residual: 2.48253e-16
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # 五、稀疏线性代数
 
 ## 5.1 稀疏矩阵操作
+
+[英文原文(Sparse matrix manipulations)](http://eigen.tuxfamily.org/dox/group__TutorialSparse.html)
+
+处理和解决稀疏问题涉及各种模块，总结如下：
+
+| 模块                                                         | 头文件                                  | 内容                                                         |
+| ------------------------------------------------------------ | --------------------------------------- | ------------------------------------------------------------ |
+| [SparseCore](http://eigen.tuxfamily.org/dox/group__SparseCore__Module.html) | \#include<Eigen/SparseCore>             | [SparseMatrix](http://eigen.tuxfamily.org/dox/classEigen_1_1SparseMatrix.html)和[SparseVector](http://eigen.tuxfamily.org/dox/classEigen_1_1SparseVector.html)类、矩阵集合、基本稀疏线性代数（包括稀疏三角求解器） |
+| [SparseCholesky](http://eigen.tuxfamily.org/dox/group__SparseCholesky__Module.html) | \#include<Eigen/SparseCholesky>         | 直接稀疏[LLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html)和[LDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1LDLT.html) Cholesky 分解，解决稀疏自伴随正定问题 |
+| [SparseLU](http://eigen.tuxfamily.org/dox/group__SparseLU__Module.html) | \#include<Eigen/SparseLU>               | 求解一般方形稀疏系统的稀疏 LU 分解                           |
+| [SparseQR](http://eigen.tuxfamily.org/dox/group__SparseQR__Module.html) | \#include<Eigen/SparseQR>               | 用于解决稀疏线性最小二乘问题的稀疏 QR 分解                   |
+| [IterativeLinearSolvers](http://eigen.tuxfamily.org/dox/group__IterativeLinearSolvers__Module.html) | \#include<Eigen/IterativeLinearSolvers> | 解决大型一般线性平方问题（包括自伴随正定问题）的迭代求解器   |
+| [Sparse](http://eigen.tuxfamily.org/dox/group__Sparse__Module.html) | \#include<Eigen/Sparse>                 | 包含以上所有模块                                             |
+
+
+
+### 稀疏矩阵格式
+
+在许多应用中（例如，有限元方法），通常要处理非常大的矩阵，其中只有少数系数不为零。在这种情况下，可以通过使用仅存储非零系数的特殊表示来减少内存消耗并提高性能。这样的矩阵称为稀疏矩阵。
+
+#### SparseMatrix 类
+
+类 `SparseMatrix` 是 Eigen 的稀疏模块的主要稀疏矩阵表示；它提供高性能和低内存使用率。它实现了广泛使用的压缩列（或行）存储方案的更通用变体。 它由四个紧凑数组组成：
+
+- Values：存储非零的系数值。
+- InnerIndices：存储非零系数的行（或列）索引。
+- OuterStarts：存储每一列（或行）第一个非零系数在前两个数组中的索引，最后一个元素为前两个数组的大小。
+- InnerNNZs：存储每列（或行）的非零系数个数。
+
+其中，`Inner` 指的是内部向量，它是列主矩阵的列，或行主矩阵的行。`Outer` 指的是另一个方向。
+
+如下例子中更好的解释了这个存储方案：
+
+有矩阵：
+$$
+\begin{bmatrix} 0&3&0&0&0 \\ 22&0&0&0&17 \\ 7&5&0&1&0 \\ 0&0&0&0&0 \\ 0&0&14&0&8 \\ \end{bmatrix}
+$$
+其可能的稀疏列主元表示之一为：
+
+```
+Values:			22	7	_	3	5	14	_	_	1	_	17	8
+InnerIndices:	1	2	_	0	2	4	_	_	2	_	1	4
+OuterStarts:	0	3	5	8	10	12
+InnerNNZs:		2	2	1	1	2	
+```
+
+目前，保证给定内部向量的元素始终按递增的内部索引排序。`_ ` 表示可用于快速插入新元素的可用空间。假设不需要重新分配，随机元素的插入复杂度为 `O(nnz_j)` ，其中 `nnz_j` 是相应内部向量的非零系数个数。另一方面，在给定的内部向量中插入具有递增内部索引的元素效率更高，因为这只需要增加相应的 `InnerNNZs` 条目，这是一个 `O(1)` 操作。
+
+没有可用空间的情况是一种特殊情况，称为压缩模式。它对应于广泛使用的压缩列（或行）存储方案（CCS 或 CRS）。任何 `SparseMatrix` 对象都可以通过调用 `SparseMatrix::makeCompressed()` 函数转换为这种形式。在这种情况下，可以注意到 `InnerNNZs` 数组与 `OuterStarts` 是冗余的，因为有等式：`InnerNNZs[j] == OuterStarts[j+1] - OuterStarts[j]`。因此，实际上调用 `SparseMatrix::makeCompressed()` 会释放这个缓冲区。
+
+值得注意的是，Eigen 对外部库的大多数包装器都需要压缩矩阵作为输入。
+
+Eigen 运算的结果总是产生压缩的稀疏矩阵。另一方面，将新元素插入 `SparseMatrix` 会将其转换为未压缩模式。
+
+这是先前以压缩模式表示的矩阵：
+
+```
+Values:			22	7	3	5	14	1	17	8
+InnerIndices:	1	2	0	2	4	2	1	4
+OuterStarts:	0	2	4	5	6	8
+```
+
+`SparseVector` 是 `SparseMatrix` 的特例，其中仅存储 `Values` 和 `InnerIndices` 数组。`SparseVector` 没有压缩/未压缩模式的概念。
+
+
+
+### 第一个示例
+
+在描述每个单独的类之前，让我们从以下典型示例开始：使用有限差分格式和 `Dirichlet` 边界条件在规则二维网格上求解拉普拉斯方程 $Δu=0$ 。这样的问题可以在数学上表示为以下形式的线性问题，$Ax = b$，其中 $x$ 是大小为 $m$ 的未知向量（在我们的例子中，是像素的值），$b$ 是由边界条件产生的右侧矢量，并且 $A$ 是一个大小为 $m*m$ 由拉普拉斯算子离散化产生的仅包含少数非零元素的矩阵。
+
+示例代码如下：
+
+```cpp
+#include <Eigen/Sparse>
+#include <vector>
+#include <iostream>
+ 
+typedef Eigen::SparseMatrix<double> SpMat; // declares a column-major sparse matrix type of double
+typedef Eigen::Triplet<double> T;
+ 
+void buildProblem(std::vector<T>& coefficients, Eigen::VectorXd& b, int n);
+void saveAsBitmap(const Eigen::VectorXd& x, int n, const char* filename);
+ 
+int main(int argc, char** argv)
+{
+  if(argc!=2) 
+  {
+    std::cerr << "Error: expected one and only one argument.\n";
+    return -1;
+  }
+  
+  int n = 300;  // size of the image
+  int m = n*n;  // number of unknowns (=number of pixels)
+ 
+  // Assembly:
+  std::vector<T> coefficients;            // list of non-zeros coefficients
+  Eigen::VectorXd b(m);                   // the right hand side-vector resulting from the constraints
+  buildProblem(coefficients, b, n);
+ 
+  SpMat A(m,m);
+  A.setFromTriplets(coefficients.begin(), coefficients.end());
+ 
+  // Solving:
+  Eigen::SimplicialCholesky<SpMat> chol(A); // performs a Cholesky factorization of A
+  Eigen::VectorXd x = chol.solve(b);        // use the factorization to solve for the given right hand side
+ 
+  // Export the result to a file:
+  saveAsBitmap(x, n, argv[1]);
+ 
+  return 0;
+}
+```
+
+在此示例中，首先定义 `double SparseMatrix<double>` 的列优先稀疏矩阵类型，以及相同标量类型 `Triplet<double>` 的三元组列表。三元组是将非零条目表示为三元组的简单对象：行索引、列索引、值。
+
+在 main 函数中，我们声明了一个三元组系数列表（作为标准矢量）和由 `buildProblem` 函数填充的右侧矢量 `b`。然后将非零系数的原始和平面列表转换为真正的 `SparseMatrix` 对象 `A`。请注意，列表的元素不必排序，可能的重复系数将被合并。 
+
+最后一步是有效地解决组装的问题。由于生成的矩阵 `A` 在结构上是对称的，可以通过 `SimplicialLDLT` 类执行直接的 `Cholesky` 分解，该类的行为类似于密集对象的 `LDLT` 对应操作。
+
+生成的向量 `x` 包含作为一维数组的像素值，该数组保存到如下图所示的 `jpeg` 文件中。
+
+![1.First_example](img/1.First_example-1685806283722-2.jpeg)
+
+
+
+`buildProblem` 和 `saveAsBitmap` 函数超出了本教程的范围。出于好奇和可重复性的目的，可在[这里](http://eigen.tuxfamily.org/dox/TutorialSparse_example_details.html)下载。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
