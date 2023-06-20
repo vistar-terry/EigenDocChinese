@@ -4939,11 +4939,11 @@ Residual: 2.48253e-16
 
 
 
-## 4.5 密集分解的基准
+## 4.5 稠密矩阵分解函数对比
 
 [英文原文(Benchmark of dense decompositions)](http://eigen.tuxfamily.org/dox/group__DenseDecompositionBenchmark.html)
 
-本页介绍了 Eigen 为各种方阵和过约束问题提供的密集矩阵分解的速度比较。
+本页介绍了 Eigen 为各种方阵和过约束问题提供的稠密矩阵分解的速度比较。
 
 有关线性求解器、分解的特征和数值鲁棒性的更一般概述，请查看 [此表](http://eigen.tuxfamily.org/dox/group__TopicLinearAlgebraDecompositions.html)。
 
@@ -5098,31 +5098,170 @@ int main(int argc, char** argv)
 
 
 
+### SparseMatrix 类
+
+#### 矩阵和向量属性
+
+`SparseMatrix` 和 `SparseVector` 类采用三个模板参数：标准类型（例如 `double`） 存储顺序（`ColMajor` 或 `RowMajor`，默认为 `ColMajor`） 内部索引类型（默认为 `int`）。
+
+对于稠密矩阵对象，构造函数需要传入对象的大小。这里有些例子：
+
+```cpp
+// declares a 1000x2000 column-major compressed sparse matrix of complex<float>
+SparseMatrix<std::complex<float> > mat(1000,2000);   
+// declares a 1000x2000 row-major compressed sparse matrix of double
+SparseMatrix<double,RowMajor> mat(1000,2000);  
+// declares a column sparse vector of complex<float> of size 1000
+SparseVector<std::complex<float> > vec(1000);   
+// declares a row sparse vector of double of size 1000
+SparseVector<double,RowMajor> vec(1000);                   
+```
+
+在本教程的其余部分，`mat` 和 `vec`分别表示任何稀疏矩阵和稀疏向量对象。
+
+可以使用以下函数查询矩阵的维度：
+
+```cpp
+// 标准维度
+mat.rows()
+mat.cols()
+vec.size()
+// 内部/外部尺寸维度
+mat.innerSize()
+mat.outerSize()
+// 非零系数
+mat.nonZeros() 
+vec.nonZeros() 
+```
+
+#### 迭代非零系数
+
+稀疏对象的元素可以通过`coeffRef(i, j)`函数进行随机访问。然而，这个函数涉及到一个相当消耗资源的二分搜索。在大多数情况下，我们只想迭代非零元素。这可以通过标准循环遍历外部维度来实现，然后使用`InnerIterator` 迭代内部向量的非零元素。因此，非零系数必须按照存储顺序进行访问。以下是一个示例：
+
+```cpp
+SparseMatrix<double> mat(rows,cols);
+for (int k=0; k<mat.outerSize(); ++k)
+{
+    for (SparseMatrix<double>::InnerIterator it(mat,k); it; ++it)
+    {
+        it.value();
+        it.row();   // row index
+        it.col();   // col index (here it is equal to k)
+        it.index(); // inner index, here it is equal to it.row()
+    }
+}
+
+SparseVector<double> vec(size);
+for (SparseVector<double>::InnerIterator it(vec); it; ++it)
+{
+      it.value(); // == vec[ it.index() ]
+      it.index();
+}
+```
+
+对于可写表达式，可以使用 `valueRef()` 函数修改引用值。如果稀疏矩阵或向量的类型依赖于模板参数，则需要`typename`关键字来表明`InnerIterator`表示一个类型；更多详细信息参见 [The template and typename keywords in C++](http://eigen.tuxfamily.org/dox/TopicTemplateKeyword.html)
 
 
 
+### 填充稀疏矩阵
+
+由于 SparseMatrix 的特殊存储方案，在添加新的非零系数时必须特别小心。例如，向稀疏矩阵中随机插入一个元素的成本是`O(nnz)`，其中`nnz`是当前非零系数的数量。
+
+因此，创建稀疏矩阵并保证良好性能的最简单方法是首先构建所谓的三元组列表，然后将其转换为`SparseMatrix`。
+
+这是一个典型的用法示例：
+
+```cpp
+typedef Eigen::Triplet<double> T;
+std::vector<T> tripletList;
+tripletList.reserve(estimation_of_entries);
+for(...)
+{
+  // ...
+  tripletList.push_back(T(i,j,v_ij));
+}
+SparseMatrixType mat(rows,cols);
+mat.setFromTriplets(tripletList.begin(), tripletList.end());
+// mat is ready to go!
+```
+
+`std::vector`中的三元组元素可能以任意顺序存储，并且可能包含重复元素，这些元素将被`setFromTriplets()`函数进行求和处理。有关更多详细信息，请参阅[SparseMatrix :: setFromTriplets()](http://eigen.tuxfamily.org/dox/classEigen_1_1SparseMatrix.html#a8f09e3597f37aa8861599260af6a53e0)函数和类[Triplet](http://eigen.tuxfamily.org/dox/classEigen_1_1Triplet.html)。
+
+然而，在某些情况下，可以通过直接将非零元素插入目标矩阵来实现稍高的性能和较低的内存消耗。这种方法的典型场景如下所示：
+
+```cpp
+SparseMatrix<double> mat(rows,cols);       // default is column major
+mat.reserve(VectorXi::Constant(cols,6));
+for each i,j such that v_ij != 0
+  mat.insert(i,j) = v_ij;                  // alternative: mat.coeffRef(i,j) += v_ij;
+mat.makeCompressed();                      // optional
+```
+
+- 这里的关键是第2行，我们为每列预留了6个非零项的空间。在许多情况下，每列或每行的非零元素数量可以很容易地预先知道。如果每个内部向量的非零元素数量差异很大，则可以通过提供具有`operator[](int j)`方法（返回第 j 个内部向量的保留大小）的向量对象（例如通过`VectorXi`或`std::vector<int>`实现）来为每个内部向量指定保留大小。如果只能得到每个内部向量的非零元素数量的粗略估计，则强烈建议将其高估而不是低估。如果省略此行，则将为新元素的第一次插入每个内部向量保留2个元素的空间。
+
+- 第4行执行了一个排序插入。在这个例子中，理想情况是第 j 列不是满的，并且包含内部索引比 i 小的非零元素。在这种情况下，此操作可以简化为 `O(1)` 操作。
+
+- 调用`insert(i,j)`时，元素`i`，`j`不能已经存在，否则使用`coeffRef(i,j)`方法，这将允许累加值，例如，此方法首先执行二分搜索，如果元素不存在，则最终调用`insert(i,j)`。它比`insert()`更灵活，但代价更高。
+
+- 第5行代码抑制了剩余的空白空间，并将矩阵转换为压缩列存储格式。
 
 
 
+### 支持的运算符和函数
 
+由于稀疏矩阵具有特殊的存储格式，它们不能像稠密矩阵那样提供同样级别的灵活性。在Eigen的稀疏模块中，我们选择仅暴露可以有效实现的稠密矩阵API子集。在下面的描述中，`sm`表示稀疏矩阵，`sv`表示稀疏向量，`dm`表示稠密矩阵，`dv`表示稠密向量。
 
+#### 基本操作
 
+稀疏表达式支持大多数一元和二元系数运算：
 
+```cpp
+sm1.real()   sm1.imag()   -sm1                    0.5*sm1
+sm1+sm2      sm1-sm2      sm1.cwiseProduct(sm2)
+```
 
+然而，一个强制性的限制是存储顺序必须匹配。例如，在下面的例子中：
 
+```cpp
+sm4 = sm1 + sm2 + sm3;
+```
 
+`sm1`、`sm2`和`sm3`必须全是行优先或者全是列优先。另一方面，目标矩阵`sm4`没有限制。例如，这意味着对于 $A^T+A$，矩阵 $A^T$ 必须被计算成一个具有兼容存储顺序的临时矩阵：
 
+```cpp
+parseMatrix<double> A, B;
+B = SparseMatrix<double>(A.transpose()) + A;
+```
 
+二项式系数的操作符也可以混合稀疏和稠密表达式：
 
+```cpp
+m2 = sm1.cwiseProduct(dm1);
+dm2 = sm1 + dm1;
+dm2 = dm1 - sm1;
+```
 
+就性能而言，对于稀疏和稠密矩阵的加减操作最好分成两步进行。例如，不要直接执行 `dm2 = sm1 + dm1`，而应该先执行以下操作：
 
+```cpp
+dm2 = dm1;
+dm2 += sm1;
+```
 
+这种方式的优点是充分利用稠密存储的更高性能（没有间接寻址、SIMD等），而只在稀疏矩阵的少数非零元素上花费低效的稀疏计算成本。
 
+稀疏表达式也支持转置：
 
+```cpp
+sm1 = sm2.transpose();
+sm1 = sm2.adjoint();
+```
 
+但是，没有`transposeInPlace()`方法。
 
+#### 矩阵乘积
 
-
+Eigen支持多种不同类型的稀疏矩阵乘积，如下所述：
 
 
 
