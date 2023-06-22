@@ -5263,7 +5263,113 @@ sm1 = sm2.adjoint();
 
 Eigen支持多种不同类型的稀疏矩阵乘积，如下所述：
 
+- **稀疏和稠密矩阵相乘**
 
+```cpp
+dv2 = sm1 * dv1;
+dm2 = dm1 * sm1.adjoint();
+dm2 = 2. * sm1 * dm1;
+```
+
+- **对称的稀疏和稠密矩阵相乘**
+
+​		使用selfadjointView()指定对称性，可以优化稀疏对称矩阵与密集矩阵（或向量）的乘积。
+
+```cpp
+dm2 = sm1.selfadjointView<>() * dm1;        // if all coefficients of sm1 are stored
+dm2 = sm1.selfadjointView<Upper>() * dm1;   // if only the upper part of sm1 is stored
+dm2 = sm1.selfadjointView<Lower>() * dm1;   // if only the lower part of sm1 is stored
+```
+
+- **稀疏和稀疏矩阵相乘**
+
+​		对于稀疏矩阵的乘积，有两种不同的算法可用。默认算法是保守的，并保留可能出现的显式零值。
+
+```cpp
+sm3 = sm1 * sm2;
+sm3 = 4 * sm1.adjoint() * sm2;
+```
+
+​		第二种算法可以即时裁剪显式零值或小于给定阈值的值。它通过 prune() 函数启用和控制。
+
+```cpp
+sm3 = (sm1 * sm2).pruned();              // removes numerical zeros
+sm3 = (sm1 * sm2).pruned(ref);           // removes elements much smaller than ref
+sm3 = (sm1 * sm2).pruned(ref,epsilon);   // removes elements smaller than ref*epsilon
+```
+
+- **排列**
+
+​		最后，排列操作也可以应用于稀疏矩阵。
+
+```cpp
+PermutationMatrix<Dynamic,Dynamic> P = ...;
+sm2 = P * sm1;
+sm2 = sm1 * P.inverse();
+sm2 = sm1.transpose() * P;
+```
+
+
+
+#### 块操作
+
+关于读取访问权限，稀疏矩阵与密集矩阵相同，公开了用于访问子矩阵（如块、列和行）的API。有关详细介绍，请参见[块操作](http://eigen.tuxfamily.org/dox/group__TutorialBlockOperations.html)。但是，出于性能考虑，向子稀疏矩阵的写入要受到更多限制，目前仅限于连续的列（或行）集，这些列（或行）是列主（或行主）稀疏矩阵可写的。此外，这些信息必须在编译时知道，不能使用诸如`block(...)`和`corner*(...)`之类的方法。下面总结了向`SparseMatrix`写入访问权限的可用API：
+
+```cpp
+SparseMatrix<double,ColMajor> sm1;
+sm1.col(j) = ...;
+sm1.leftCols(ncols) = ...;
+sm1.middleCols(j,ncols) = ...;
+sm1.rightCols(ncols) = ...;
+ 
+SparseMatrix<double,RowMajor> sm2;
+sm2.row(i) = ...;
+sm2.topRows(nrows) = ...;
+sm2.middleRows(i,nrows) = ...;
+sm2.bottomRows(nrows) = ...;
+```
+
+此外，稀疏矩阵提供了`SparseMatrixBase::innerVector()`和`SparseMatrixBase::innerVectors()`方法，它们是针对列优先存储的`col/middleCols`方法和针对行优先存储的`row/middleRows`方法的别名。
+
+
+
+#### 三角形视图和自共轭视图
+
+与密集矩阵一样，`triangularView()`函数可用于处理矩阵的三角部分，并对具有密集右侧的矩阵进行三角求解：
+
+```cpp
+dm2 = sm1.triangularView<Lower>(dm1);
+dv2 = sm1.transpose().triangularView<Upper>(dv1);
+```
+
+`selfadjointView()`函数允许进行各种操作。
+
+- 优化稀疏-稠密矩阵乘积
+
+```cpp
+dm2 = sm1.selfadjointView<>() * dm1;        // if all coefficients of sm1 are stored
+dm2 = sm1.selfadjointView<Upper>() * dm1;   // if only the upper part of sm1 is stored
+dm2 = sm1.selfadjointView<Lower>() * dm1;   // if only the lower part of sm1 is stored
+```
+
+- 复制三角形部分
+
+```cpp
+// makes a full selfadjoint matrix from the upper triangular part
+sm2 = sm1.selfadjointView<Upper>();  
+// copies the upper triangular part to the lower triangular part
+sm2.selfadjointView<Lower>() = sm1.selfadjointView<Upper>();      
+```
+
+- 对称排列的应用
+
+```cpp
+PermutationMatrix<Dynamic,Dynamic> P = ...;
+// compute P S P' from the upper triangular part of A, and make it a full matrix
+sm2 = A.selfadjointView<Upper>().twistedBy(P);     
+// compute P S P' from the lower triangular part of A, and then only compute the lower part
+sm2.selfadjointView<Lower>() = A.selfadjointView<Lower>().twistedBy(P);       
+```
 
 
 
