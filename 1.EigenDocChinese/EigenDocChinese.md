@@ -5373,6 +5373,53 @@ sm2.selfadjointView<Lower>() = A.selfadjointView<Lower>().twistedBy(P);
 
 
 
+## 5.2 求解稀疏线性系统
+
+[英文原文(Solving Sparse Linear Systems)](http://eigen.tuxfamily.org/dox/group__TopicSparseSystems.html)
+
+在Eigen中，有多种方法可用于求解稀疏系数矩阵的线性系统。由于此类矩阵的特殊表示，必须特别小心以获得良好的性能。有关Eigen中稀疏矩阵的详细介绍，请参见“[稀疏矩阵操作](#5.1 稀疏矩阵操作)”。本页列出了Eigen中可用的稀疏求解器。还介绍了所有这些线性求解器共同的主要步骤。根据矩阵的属性、所需的准确度，最终用户可以调整这些步骤以提高其代码的性能。请注意，并不需要深入了解这些步骤背后的内容：最后一节介绍了一个基础例程，可轻松使用以获取所有可用求解器的性能洞察。
+
+### 稀疏求解器列表
+
+Eigen 目前提供了一组广泛的内置求解器，以及外部求解器库的包装器。它们总结在下表中：
+
+#### 内置直接求解器
+
+| 类及头文件                                                   | 求解器种类     | 矩阵种类      | 与性能相关的功能                                             | 备注                                                |
+| ------------------------------------------------------------ | -------------- | ------------- | ------------------------------------------------------------ | --------------------------------------------------- |
+| [SimplicialLLT](http://eigen.tuxfamily.org/dox/classEigen_1_1SimplicialLLT.html)<br/>`#include<Eigen/SparseCholesky>` | 直接LLt分解    | 对称正定(SPD) | 通过对矩阵的重排列、消元等操作，来减少生成的新元素，以减少计算时间和空间。（Fill-in reducing） | SimplicLDLT 通常更可取                              |
+| [SimplicialLDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1SimplicialLDLT.html)<br/>`#include<Eigen/SparseCholesky>` | 直接 LDLt 分解 | 对称正定(SPD) | Fill-in reducing                                             | 推荐用于非常稀疏且不太大的问题（例如，2D 泊松方程） |
+| [SparseLU](http://eigen.tuxfamily.org/dox/classEigen_1_1SparseLU.html)<br/>`#include<Eigen/SparseLU>` | LU 分解        | 方阵          | 快速的密集代数运算，包括基于GPU的加速、多线程优化、并行计算等。（Leverage fast dense algebra）、Fill-in reducing | 针对不规则模式的大小问题进行了优化                  |
+| [SparseQR](http://eigen.tuxfamily.org/dox/classEigen_1_1SparseQR.html)<br/>`#include<Eigen/SparseQR>` | QR 分解        | 矩形阵        | Fill-in reducing                                             | 推荐用于最小二乘问题，具有基本的秩显示特性。        |
+
+
+
+#### 内置迭代求解器
+
+| 类及头文件                                                   | 求解器种类              | 矩阵种类 | 默认支持的预处理器                                           | 备注                                              |
+| ------------------------------------------------------------ | ----------------------- | -------- | ------------------------------------------------------------ | ------------------------------------------------- |
+| [ConjugateGradient](http://eigen.tuxfamily.org/dox/classEigen_1_1ConjugateGradient.html)<br/>`#include<Eigen/IterativeLinearSolvers>` | 经典共轭梯度法（CG）    | SPD      | [ IdentityPreconditioner](http://eigen.tuxfamily.org/dox/classEigen_1_1IdentityPreconditioner.html), [[DiagonalPreconditioner](http://eigen.tuxfamily.org/dox/classEigen_1_1DiagonalPreconditioner.html)], [IncompleteCholesky](http://eigen.tuxfamily.org/dox/classEigen_1_1IncompleteCholesky.html) | 推荐用于大型对称问题（例如 3D 泊松方程）          |
+| [LeastSquaresConjugateGradient](http://eigen.tuxfamily.org/dox/classEigen_1_1LeastSquaresConjugateGradient.html)<br/>`#include<Eigen/IterativeLinearSolvers>` | 矩形阵最小二乘问题的 CG | 矩形阵   | [ IdentityPreconditioner](http://eigen.tuxfamily.org/dox/classEigen_1_1IdentityPreconditioner.html), [[LeastSquareDiagonalPreconditioner](http://eigen.tuxfamily.org/dox/classEigen_1_1LeastSquareDiagonalPreconditioner.html)] | 求解 $min|Ax-b|^2$ 而不形成 $A^TA$                |
+| [BiCGSTAB](http://eigen.tuxfamily.org/dox/classEigen_1_1BiCGSTAB.html)<br/>`#include<Eigen/IterativeLinearSolvers>` | 迭代稳定双共轭梯度      | 方阵     | [IdentityPreconditioner](http://eigen.tuxfamily.org/dox/classEigen_1_1IdentityPreconditioner.html), [[DiagonalPreconditioner](http://eigen.tuxfamily.org/dox/classEigen_1_1DiagonalPreconditioner.html)], [IncompleteLUT](http://eigen.tuxfamily.org/dox/classEigen_1_1IncompleteLUT.html) | 要加速收敛，请尝试使用 `IncompleteLUT `预调节器。 |
+
+> - 共轭梯度法：（Conjugate Gradient method，简称CG），它是一种迭代求解线性方程组的方法。CG方法通常用于解决大规模稀疏对称正定线性方程组，具有高效、收敛快等优点。在Classic iterative CG中，每次迭代会得到一个新的解向量，同时利用前一次的残差和搜索方向来求解下一次的迭代解。
+
+> - 稳定双共轭梯度法：是求解非对称矩阵线性方程组（Ax = b）的迭代算法。与传统的共轭梯度法不同，稳定双共轭梯度法可以处理非对称矩阵的情况，并且在求解过程中，该方法可以保持数值稳定性，避免出现数值震荡等问题。该方法的主要思路是采用两条共轭的方向（与传统共轭梯度法相同）来求解线性方程组，但在每次迭代过程中，引入了一个稳定因子，该稳定因子的作用是保持迭代过程的数值稳定性。该稳定因子可以通过计算残差向量和搜索方向向量之间的内积来确定。
+
+
+
+#### 外部求解器的包装器
+
+| 类   |      |      |      |      |      |      |
+| ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+|      |      |      |      |      |      |      |
+|      |      |      |      |      |      |      |
+|      |      |      |      |      |      |      |
+|      |      |      |      |      |      |      |
+|      |      |      |      |      |      |      |
+|      |      |      |      |      |      |      |
+|      |      |      |      |      |      |      |
+|      |      |      |      |      |      |      |
 
 
 
@@ -5394,10 +5441,11 @@ sm2.selfadjointView<Lower>() = A.selfadjointView<Lower>().twistedBy(P);
 
 
 
+## 5.3 无矩阵求解器
 
 
 
-
+## 5.4 稀疏矩阵快速参考指南
 
 
 
@@ -5405,15 +5453,61 @@ sm2.selfadjointView<Lower>() = A.selfadjointView<Lower>().twistedBy(P);
 
 # 六、几何学
 
+## 6.1 空间变换
+
 
 
 
 
 # 七、扩展/自定义Eigen
 
+## 7.1 扩展 MatrixBase（包括其他类）
 
+## 7.2 继承 Matrix
+
+## 7.3 使用自定义标量类型
+
+## 7.4 使用nullary-expressions操作矩阵
+
+## 7.5 添加新的表达式类型
 
 
 
 # 八、常见话题
+
+## 8.1 编写以特征类型为参数的函数
+
+## 8.2 预处理器指令
+
+## 8.3 断言
+
+## 8.4 使 Eigen 并行运行
+
+## 8.5 使用 Eigen 的 BLAS/LAPACK
+
+## 8.6 使用 Eigen 的英特尔® MKL
+
+## 8.7 在 CUDA 内核中使用 Eigen
+
+## 8.8 常见的陷阱
+
+## 8.9 C++中的template和typename关键字
+
+## 8.10 深入了解 Eigen
+
+### 8.10.1 Eigen 内部发生了什么
+
+### 8.10.2 类层次结构
+
+### 8.10.3 惰性求值与混叠(Aliasing)
+
+## 8.11 在 CMake 项目中使用 Eigen
+
+
+
+
+
+
+
+
 
