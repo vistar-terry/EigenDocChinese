@@ -5410,26 +5410,120 @@ Eigen 目前提供了一组广泛的内置求解器，以及外部求解器库�
 
 #### 外部求解器的包装器
 
-| 类   |      |      |      |      |      |      |
-| ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-|      |      |      |      |      |      |      |
-|      |      |      |      |      |      |      |
-|      |      |      |      |      |      |      |
-|      |      |      |      |      |      |      |
-|      |      |      |      |      |      |      |
-|      |      |      |      |      |      |      |
-|      |      |      |      |      |      |      |
-|      |      |      |      |      |      |      |
+| 类                                                           | 模块                                                         | 求解器类型                          | 矩阵类型             | 与性能相关的功能                                             | 依赖/证书                                                    | 备注                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ----------------------------------- | -------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [PastixLLT](http://eigen.tuxfamily.org/dox/classEigen_1_1PastixLLT.html)<br/>[PastixLDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1PastixLDLT.html)<br/>[PastixLU](http://eigen.tuxfamily.org/dox/classEigen_1_1PastixLU.html) | [PaStiXSupport](http://eigen.tuxfamily.org/dox/group__PaStiXSupport__Module.html) | Direct LLt, LDLt, LU factorizations | SPD<br/>SPD<br/>方阵 | Fill-in reducing, Leverage fast dense algebra, Multithreading | Requires the [PaStiX](http://pastix.gforge.inria.fr/) package, **CeCILL-C** | 针对棘手问题和对称模式进行了优化                             |
+| [CholmodSupernodalLLT](http://eigen.tuxfamily.org/dox/classEigen_1_1CholmodSupernodalLLT.html) | [CholmodSupport](http://eigen.tuxfamily.org/dox/group__CholmodSupport__Module.html) | Direct LLt factorization            | SPD                  | Fill-in reducing, Leverage fast dense algebra                | Requires the [SuiteSparse](http://www.suitesparse.com/) package, **GPL** |                                                              |
+| [UmfPackLU](http://eigen.tuxfamily.org/dox/classEigen_1_1UmfPackLU.html) | [ UmfPackSupport](http://eigen.tuxfamily.org/dox/group__UmfPackSupport__Module.html) | Direct LU factorization             | 方阵                 | Fill-in reducing, Leverage fast dense algebra                | Requires the [SuiteSparse](http://www.suitesparse.com/) package, **GPL** |                                                              |
+| KLU                                                          | [ KLUSupport](http://eigen.tuxfamily.org/dox/group__KLUSupport__Module.html) | Direct LU factorization             | 方阵                 | Fill-in reducing, suitted for circuit simulation             | Requires the [SuiteSparse](http://www.suitesparse.com/) package, **GPL** |                                                              |
+| [SuperLU](http://eigen.tuxfamily.org/dox/classEigen_1_1SuperLU.html) | [SuperLUSupport](http://eigen.tuxfamily.org/dox/group__SuperLUSupport__Module.html) | Direct LU factorization             | 方阵                 | Fill-in reducing, Leverage fast dense algebra                | Requires the [SuperLU](http://crd-legacy.lbl.gov/~xiaoye/SuperLU/) library, (BSD-like) |                                                              |
+| [SPQR](http://eigen.tuxfamily.org/dox/classEigen_1_1SPQR.html) | [ SPQRSupport](http://eigen.tuxfamily.org/dox/group__SPQRSupport__Module.html) | QR factorization                    | 矩形阵               | fill-in reducing, multithreaded, fast dense algebra          | Requires the [SuiteSparse](http://www.suitesparse.com/) package, **GPL** | 推荐用于最小二乘问题，具有基本的秩显示特性。                 |
+| [PardisoLLT](http://eigen.tuxfamily.org/dox/classEigen_1_1PardisoLLT.html)<br/>[PardisoLDLT](http://eigen.tuxfamily.org/dox/classEigen_1_1PardisoLDLT.html)<br/>[PardisoLU](http://eigen.tuxfamily.org/dox/classEigen_1_1PardisoLU.html) | [PardisoSupport](http://eigen.tuxfamily.org/dox/group__PardisoSupport__Module.html) | Direct LLt, LDLt, LU factorizations | SPD<br/>SPD<br/>方阵 | Fill-in reducing, Leverage fast dense algebra, Multithreading | Requires the [Intel MKL](http://eigen.tuxfamily.org/Counter/redirect_to_mkl.php) package, **Proprietary** | 针对棘手问题模式进行了优化，另请参阅[将 MKL 与 Eigen 结合使用](http://eigen.tuxfamily.org/dox/TopicUsingIntelMKL.html) |
+| [AccelerateLLT](http://eigen.tuxfamily.org/dox/classAccelerateLLT.html)<br/>[AccelerateLDLT](http://eigen.tuxfamily.org/dox/classAccelerateLDLT.html)<br/>[AccelerateQR](http://eigen.tuxfamily.org/dox/classAccelerateQR.html) | [AccelerateSupport](http://eigen.tuxfamily.org/dox/group__AccelerateSupport__Module.html) | Direct LLt, LDLt, QR factorizations | SPD<br/>SPD<br/>方阵 | Fill-in reducing, Leverage fast dense algebra, Multithreading | Requires the [Apple Accelerate](https://developer.apple.com/documentation/accelerate) package, **Proprietary** |                                                              |
+
+这里SPD的意思是对称正定。
 
 
 
+### 稀疏求解器概念
+
+所有这些求解器都遵循相同的一般概念。这是一个典型且普遍的例子：
+
+```cpp
+#include <Eigen/RequiredModuleName>
+// ...
+SparseMatrix<double> A;
+// fill A
+VectorXd b, x;
+// fill b
+// solve Ax = b
+SolverClassName<SparseMatrix<double> > solver;
+solver.compute(A);
+if(solver.info()!=Success) {
+  // decomposition failed
+  return;
+}
+x = solver.solve(b);
+if(solver.info()!=Success) {
+  // solving failed
+  return;
+}
+// solve for another right hand side:
+x1 = solver.solve(b1);
+```
+
+对于 SPD 求解器，第二个可选模板参数允许指定使用哪个三角形部分，例如：
+
+```cpp
+#include <Eigen/IterativeLinearSolvers>
+ 
+ConjugateGradient<SparseMatrix<double>, Eigen::Upper> solver;
+x = solver.compute(A).solve(b);
+```
+
+在上面的例子中，仅考虑输入矩阵A的上三角部分进行求解。相反的三角形可能为空，也可能包含任意值。
+
+如果必须解决具有相同稀疏模式的多个问题，则“计算”步骤可以分解如下：
+
+```cpp
+SolverClassName<SparseMatrix<double> > solver;
+solver.analyzePattern(A);  // for this step the numerical values of A are not used
+solver.factorize(A);
+x1 = solver.solve(b1);
+x2 = solver.solve(b2);
+...
+// modify the values of the nonzeros of A, the nonzeros pattern must stay unchanged
+A = ...; 
+solver.factorize(A);
+x1 = solver.solve(b1);
+x2 = solver.solve(b2);
+...
+```
+
+`compute()` 方法相当于同时调用 `analyzePattern()` 和 `factorize()`。
+
+每个求解器都提供一些特定的功能，例如行列式、对因子的访问、迭代的控制等。更多详细信息可在相应类的文档中找到。
+
+最后，大多数迭代求解器也可以在无矩阵上下文中使用，请参阅以下示例。
 
 
 
+### 计算步骤
 
+`solve()` 函数计算具有一个或多个右侧的线性系统的解。
 
+```cpp
+X = solver.solve(B);
+```
 
+在这里，`B`可以是一个向量或一个矩阵，其中列组成不同的右侧。`solve()` 函数也可以被多次调用，例如当所有的右侧不是一次性提供的时候。
 
+```cpp
+x1 = solver.solve(b1);
+// Get the second right hand side b2
+x2 = solver.solve(b2); 
+//  ...
+```
+
+对于直接方法，解是以机器精度计算的。有时候，解不需要太精确。在这种情况下，迭代方法更加适用，并且可以在解步骤之前使用`setTolerance()`设置所需的精度。有关所有可用函数，请参阅[迭代求解器模块](http://eigen.tuxfamily.org/dox/group__IterativeLinearSolvers__Module.html)的文档。
+
+ ### 基准测试例程
+
+大多数情况下，只需要知道求解系统需要多长时间，以及希望使用哪种最适合的求解器。在Eigen中，提供了一个可用于此目的的基准测试例程。在构建目录中，切换到 `bench/spbench` 并通过键入 `make spbenchsolver` 来编译该例程。使用 `--help` 选项运行它以获取所有可用选项的列表。基本上，要测试的矩阵应该遵循 `MatrixMarket` 坐标格式，并且该例程返回Eigen中所有可用求解器的统计信息。
+
+要以 `MatrixMarket` 格式导出矩阵和右侧向量，可以使用不受支持的 `SparseExtra` 模块：
+
+```cpp
+#include <unsupported/Eigen/SparseExtra>
+...
+Eigen::saveMarket(A, "filename.mtx");
+Eigen::saveMarket(A, "filename_SPD.mtx", Eigen::Symmetric); // if A is symmetric-positive-definite
+Eigen::saveMarketVector(B, "filename_b.mtx");
+```
+
+下表给出了来自几个 Eigen 内置和外部求解器的 XML 统计信息的示例：
+
+![屏幕截图 2023-06-23 123426](img/屏幕截图 2023-06-23 123426.png)
 
 
 
