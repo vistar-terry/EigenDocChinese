@@ -5686,6 +5686,8 @@ MINRES:   #iterations: 20, estimated error: 2.94473e-14
 
 ## 5.4 稀疏矩阵快速参考指南
 
+[英文原文(Quick reference guide for sparse matrices)](http://eigen.tuxfamily.org/dox/group__SparseQuickRefPage.html)
+
 本页面简要介绍了类`SparseMatrix`中可用的主要操作。首先，建议先阅读介绍性教程《[稀疏矩阵操作](#5.1 稀疏矩阵操作)》。在处理稀疏矩阵时，重要的一点是要了解它们的存储方式：即行优先或列优先，`Eigen`默认为列优先。对稀疏矩阵进行的大多数算术操作都会默认它们具有相同的存储顺序。
 
 ### 稀疏矩阵初始化
@@ -5944,6 +5946,171 @@ Map<const SparseMatrix<double> > sm2(...);                  // read-only
 # 六、几何学
 
 ## 6.1 空间变换
+
+[英文原文(Space transformations)](http://eigen.tuxfamily.org/dox/group__TutorialGeometry.html)
+
+本页将介绍几何模块提供的多种处理 2D 和 3D 旋转以及射影或仿射变换的方法。
+
+Eigen 的 `Geometry` 模块提供了两种不同类型的几何变换：
+
+- 抽象变换，例如旋转（由角度和轴或四元数表示），平移，缩放。这些变换不是表示为矩阵，但是仍然可以在表达式中与矩阵和向量混合使用，并在需要时将它们转换为矩阵。
+
+- 射影或仿射变换矩阵：请参阅 [Transform](http://eigen.tuxfamily.org/dox/classEigen_1_1Transform.html) 类。这些确实是矩阵。
+
+**注意：**
+
+如果你正在使用 OpenGL 4x4 矩阵，那么 `Affine3f` 和 `Affine3d` 就是你想要的。由于 Eigen 默认采用列主存储，你可以直接使用 `Transform::data()` 方法将变换矩阵传递给 `OpenGL`。
+
+
+
+你可以从抽象转换构造一个 `Transform`，如下所示：
+
+```cpp
+Transform t(AngleAxis(angle,axis));
+```
+
+或者，像这样：
+
+```cpp
+Transform t;
+t = AngleAxis(angle,axis);
+```
+
+但请注意，由于 C++ 的工作原理，你不能这样做：
+
+```cpp
+Transform t = AngleAxis(angle,axis);
+```
+
+**说明：**
+
+在 C++ 语言中，需要 `Transform` 具有来自 `AngleAxis` 的非显式转换构造函数，但 Eigen 不允许此处隐式转换。
+
+
+
+### 变换类型
+
+#### 2D 旋转某个角度
+
+```cpp
+Rotation2D<float> rot2(angle_in_radian);
+```
+
+
+
+#### 沿某个轴 3D 旋转某个角度
+
+```cpp
+AngleAxis<float> aa(angle_in_radian, Vector3f(ax,ay,az));
+```
+
+轴向量必须标准化。
+
+
+
+#### 使用四元数进行 3D 旋转
+
+```cpp
+Quaternion<float> q;  q = AngleAxis<float>(angle_in_radian, axis);
+```
+
+
+
+#### N 维缩放
+
+```cpp
+Scaling(sx, sy)
+Scaling(sx, sy, sz)
+Scaling(s)
+Scaling(vecN)
+```
+
+
+
+#### N 维变换
+
+```cpp
+Translation<float,2>(tx, ty)
+Translation<float,3>(tx, ty, tz)
+Translation<float,N>(s)
+Translation<float,N>(vecN)
+```
+
+
+
+#### N 维仿射变换
+
+```cpp
+Transform<float,N,Affine> t = concatenation_of_any_transformations;
+Transform<float,3,Affine> t = Translation3f(p) * AngleAxisf(a,axis) * Scaling(s);
+```
+
+
+
+#### N 维线性变换
+
+```cpp
+Matrix<float,N> t = concatenation_of_rotations_and_scalings;
+Matrix<float,2> t = Rotation2Df(a) * Scaling(s);
+Matrix<float,3> t = AngleAxisf(a,axis) * Scaling(s);
+```
+
+纯旋转， 缩放等
+
+
+
+**关于旋转的注意：**
+
+要变换多个向量，首选的表示方法是旋转矩阵，而对于其他用途，四元数是首选的表示方法，因为它们紧凑，快速且稳定。最后，`Rotation2D` 和 `AngleAxis` 主要是用于创建其他旋转对象的便捷类型。
+
+
+
+**关于平移和缩放的注意：**
+
+与 `AngleAxis` 一样，这些类的设计目的是简化线性(Matrix)和仿射(Transform)变换的创建和初始化过程。然而，与 `AngleAxis` 不同的是，这些类效率不高，但仍然可能有其他通用且高效的算法，以输入任何类型的变换。
+
+上述任何转换类型都可以转换为具有相同性质的任何其他类型，或更通用的类型。以下是一些其他示例：
+
+```cpp
+Rotation2Df r;  r  = Matrix2f(..);       // assumes a pure rotation matrix
+AngleAxisf aa;  aa = Quaternionf(..);
+AngleAxisf aa;  aa = Matrix3f(..);       // assumes a pure rotation matrix
+Matrix2f m;     m  = Rotation2Df(..);
+Matrix3f m;     m  = Quaternionf(..);       Matrix3f m;   m = Scaling(..);
+Affine3f m;     m  = AngleAxis3f(..);       Affine3f m;   m = Scaling(..);
+Affine3f m;     m  = Translation3f(..);     Affine3f m;   m = Matrix3f(..);
+```
+
+
+
+### 跨变换类型的通用 API
+
+在某种程度上，Eigen 的几何模块允许编写适用于任何变换类型的通用算法：
+
+| 描述                                                         | 代码                           |
+| ------------------------------------------------------------ | ------------------------------ |
+| 两个变换的串联                                               | gen1 * gen2;                   |
+| 将变换应用于向量                                             | vec2 = gen1 * vec1;            |
+| 获取变换的逆变换                                             | gen2 = gen1.inverse();         |
+| 球面插补（仅限[Rotation2D](http://eigen.tuxfamily.org/dox/classEigen_1_1Rotation2D.html)和 [Quaternion](http://eigen.tuxfamily.org/dox/classEigen_1_1Quaternion.html) ） | rot3 = rot1.slerp(alpha,rot2); |
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
