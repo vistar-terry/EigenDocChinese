@@ -5684,17 +5684,260 @@ MINRES:   #iterations: 20, estimated error: 2.94473e-14
 
 
 
-
-
-
-
-
-
-
-
 ## 5.4 稀疏矩阵快速参考指南
 
+本页面简要介绍了类`SparseMatrix`中可用的主要操作。首先，建议先阅读介绍性教程《[稀疏矩阵操作](#5.1 稀疏矩阵操作)》。在处理稀疏矩阵时，重要的一点是要了解它们的存储方式：即行优先或列优先，`Eigen`默认为列优先。对稀疏矩阵进行的大多数算术操作都会默认它们具有相同的存储顺序。
 
+### 稀疏矩阵初始化
+
+#### 构造
+
+```cpp
+SparseMatrix<double> sm1(1000,1000); 
+SparseMatrix<std::complex<double>, RowMajor> sm2;
+```
+
+默认为列优先。
+
+
+
+#### 重置大小/预分配内存空间
+
+```cpp
+sm1.resize(m,n);      // Change sm1 to a m x n matrix. 
+sm1.reserve(nnz);     // Allocate room for nnz nonzeros elements.
+```
+
+请注意，调用 `Reserve()` 时，不需要 `nnz` 是最终矩阵中非零元素的确切数量。通过给出一个精确的估计值可以避免在插入阶段进行多次重新分配内存。
+
+
+
+#### 赋值
+
+```cpp
+SparseMatrix<double,Colmajor> sm1;
+// Initialize sm2 with sm1.
+SparseMatrix<double,Rowmajor> sm2(sm1), sm3;        
+// Assignment and evaluations modify the storage order.
+sm3 = sm1; 
+```
+
+拷贝构造函数可用于从一种存储顺序转换为另一种存储顺序。
+
+
+
+#### 逐元素插入
+
+```cpp
+// Insert a new element; 
+sm1.insert(i, j) = v_ij;  
+ 
+// Update the value v_ij
+sm1.coeffRef(i,j) = v_ij;
+sm1.coeffRef(i,j) += v_ij;
+sm1.coeffRef(i,j) -= v_ij;
+```
+
+`insert()` 函数假设该元素在矩阵中不存在；如果该元素已经存在，请使用 `coeffRef()` 函数。
+
+
+
+#### 批量插入
+
+```cpp
+std::vector< Eigen::Triplet<double> > tripletList;
+tripletList.reserve(estimation_of_entries);
+// -- Fill tripletList with nonzero elements...
+sm1.setFromTriplets(TripletList.begin(), TripletList.end());
+```
+
+[Triplet Insertion](http://eigen.tuxfamily.org/dox/group__TutorialSparse.html#TutorialSparseFilling) 提供了完整的示例。
+
+
+
+#### 指定位置或随机插入
+
+```cpp
+sm1.setZero();
+```
+
+删除所有非零系数。
+
+
+
+### 矩阵属性
+
+除了基本函数 `rows()` 和 `cols()` 之外，还有一些有用的函数可用于从矩阵中获取一些信息。
+
+```cpp
+sm1.rows();         // Number of rows
+sm1.cols();         // Number of columns 
+sm1.nonZeros();     // Number of non zero values   
+sm1.outerSize();    // Number of columns (resp. rows) for a column major (resp. row major )
+sm1.innerSize();    // Number of rows (resp. columns) for a row major (resp. column major)
+sm1.norm();         // Euclidian norm of the matrix
+sm1.squaredNorm();  // Squared norm of the matrix
+sm1.blueNorm();
+sm1.isVector();     // Check if sm1 is a sparse vector or a sparse matrix
+sm1.isCompressed(); // Check if sm1 is in compressed form
+...
+```
+
+
+
+### 算术运算
+
+只要矩阵的维度合适并且矩阵具有相同的存储顺序，就可以轻松地在稀疏矩阵上执行算术运算。请注意，始终可以在具有不同存储顺序的矩阵中进行计算或处理数学表达式或函数。在下面的文本中，`sm` 表示稀疏矩阵，`dm` 表示密集矩阵，`dv` 表示密集向量。
+
+#### 加减
+
+```cpp
+sm3 = sm1 + sm2; 
+sm3 = sm1 - sm2;
+sm2 += sm1; 
+sm2 -= sm1; 
+```
+
+`sm1`和`sm2`应该有相同的存储顺序。
+
+
+
+#### 标量积
+
+```cpp
+sm3 = sm1 * s1;   sm3 *= s1; 
+sm3 = s1 * sm1 + s2 * sm2; sm3 /= s1;
+```
+
+如果尺寸和存储顺序一致，则可以进行多种计算组合。
+
+
+
+#### 稀疏矩阵乘积
+
+```cpp
+sm3 = sm1 * sm2;
+dm2 = sm1 * dm1;
+dv2 = sm1 * dv1;
+```
+
+
+
+#### 转置/伴随
+
+```cpp
+sm2 = sm1.transpose();
+sm2 = sm1.adjoint();
+```
+
+请注意，转置会更改存储顺序。不支持 `transposeInPlace()`。
+
+
+
+#### 排列
+
+```cpp
+perm.indices();      // Reference to the vector of indices
+sm1.twistedBy(perm); // Permute rows and columns
+sm2 = sm1 * perm;    // Permute the columns
+sm2 = perm * sm1;    // Permute the columns
+```
+
+
+
+#### 组件级操作
+
+```cpp
+sm1.cwiseProduct(sm2);
+sm1.cwiseQuotient(sm2);
+sm1.cwiseMin(sm2);
+sm1.cwiseMax(sm2);
+sm1.cwiseAbs();
+sm1.cwiseSqrt();
+```
+
+`sm1` 和 `sm2` 应该有相同的存储顺序。
+
+
+
+### 其他支持的操作
+
+#### 子矩阵
+
+```cpp
+sm1.block(startRow, startCol, rows, cols); 
+sm1.block(startRow, startCol); 
+sm1.topLeftCorner(rows, cols); 
+sm1.topRightCorner(rows, cols);
+sm1.bottomLeftCorner( rows, cols);
+sm1.bottomRightCorner( rows, cols);
+```
+
+与稠密矩阵相反，这里所有方法都是只读的。 有关读写子矩阵，请参阅[块操作](http://eigen.tuxfamily.org/dox/group__TutorialSparse.html#TutorialSparse_SubMatrices)及下文。
+
+
+
+#### 范围操作
+
+```cpp
+sm1.innerVector(outer);           // RW
+sm1.innerVectors(start, size);    // RW
+sm1.leftCols(size);               // RW
+sm2.rightCols(size);              // RO because sm2 is row-major
+sm1.middleRows(start, numRows);   // RO because sm1 is column-major
+sm1.middleCols(start, numCols);   // RW
+sm1.col(j);                       // RW
+```
+
+内部向量可以是行（对于行优先）或列（对于列优先）。 如前所述，对于读写子矩阵（RW），可以在具有不同存储顺序的矩阵中进行。
+
+
+
+#### 三角形和自伴随视图
+
+```cpp
+sm2 = sm1.triangularview<Lower>();
+sm2 = sm1.selfadjointview<Lower>();
+```
+
+三角形视图和块视图之间的多种组合是可能的。
+
+
+
+#### 三角形求解
+
+```cpp
+dv2 = sm1.triangularView<Upper>().solve(dv1);
+dv2 = sm1.topLeftCorner(size, size).triangularView<Lower>().solve(dv1);
+```
+
+对于一般稀疏矩阵求解，请使用[求解稀疏线性系统](#5.2 求解稀疏线性系统)中描述的合适的模块。
+
+
+
+#### 低级API
+
+```cpp
+sm1.valuePtr();      // Pointer to the values
+sm1.innerIndexPtr();  // Pointer to the indices.
+sm1.outerIndexPtr(); // Pointer to the beginning of each inner vector
+```
+
+如果矩阵不是压缩形式，应在调用这些函数之前使用 `makeCompressed()` 函数进行压缩。 请注意，这些函数主要提供与外部库的互操作性。更好地访问矩阵的值是通过使用`InnerIterator`类来完成的，如 [Tutorial Sparse](http://eigen.tuxfamily.org/dox/group__TutorialSparse.html) 部分所述。
+
+
+
+#### 映射外部缓冲区
+
+```cpp
+innerIndices[nnz];
+double values[nnz];
+Map<SparseMatrix<double> > sm1(rows,cols,nnz,outerIndexPtr, // read-write
+                               innerIndices,values);
+Map<const SparseMatrix<double> > sm2(...);                  // read-only
+```
+
+对于稠密矩阵，类 `Map<SparseMatrixType>` 可用于将外部缓冲区视为 Eigen 的 `SparseMatrix` 对象。
 
 
 
