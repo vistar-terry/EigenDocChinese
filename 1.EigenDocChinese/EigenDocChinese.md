@@ -6286,19 +6286,84 @@ m = AngleAxisf(angle1, Vector3f::UnitZ())
 
 
 
-
-
-
-
-
-
-
-
-
-
 # 七、扩展/自定义Eigen
 
 ## 7.1 扩展 MatrixBase（包括其他类）
+
+[英文原文(Extending MatrixBase (and other classes))](http://eigen.tuxfamily.org/dox/TopicCustomizing_Plugins.html)
+
+在本节中，将介绍如何向`MatrixBase`添加自定义方法。由于所有表达式和矩阵类型都继承自`MatrixBase`，因此将方法添加到`MatrixBase`会立即使其对所有表达式可用！一个典型的用例是，使Eigen与另一个API兼容。
+
+你肯定知道在C++中无法向现有类添加方法。Eigen里的技巧是在`MatrixBase`的声明中包含由预处理器宏`EIGEN_MATRIXBASE_PLUGIN` 定义的文件，如下：
+
+```cpp
+class MatrixBase {
+  // ...
+  #ifdef EIGEN_MATRIXBASE_PLUGIN
+  #include EIGEN_MATRIXBASE_PLUGIN
+  #endif
+};
+```
+
+因此，要使用自己的方法扩展 `MatrixBase`，只需创建一个包含方法声明的文件，并在包含任何 Eigen 的头文件之前定义 `EIGEN_MATRIXBASE_PLUGIN`。
+
+你可以通过定义类似命名的预处理器符号来扩展Eigen中使用的许多其他类。例如，如果要扩展`ArrayBase`类，则定义`EIGEN_ARRAYBASE_PLUGIN`。可以在 [预处理器指令](http://eigen.tuxfamily.org/dox/TopicPreprocessorDirectives.html) 中找到可以以此方式扩展的所有类以及相应的预处理器符号的完整列表。
+
+以下是向 `MatrixBase` 添加方法的扩展文件示例：
+
+**MatrixBaseAddons.h**
+
+```cpp
+inline Scalar at(uint i, uint j) const { return this->operator()(i,j); }
+inline Scalar& at(uint i, uint j) { return this->operator()(i,j); }
+inline Scalar at(uint i) const { return this->operator[](i); }
+inline Scalar& at(uint i) { return this->operator[](i); }
+ 
+inline RealScalar squaredLength() const { return squaredNorm(); }
+inline RealScalar length() const { return norm(); }
+inline RealScalar invLength(void) const { return fast_inv_sqrt(squaredNorm()); }
+ 
+template<typename OtherDerived>
+inline Scalar squaredDistanceTo(const MatrixBase<OtherDerived>& other) const
+{ return (derived() - other.derived()).squaredNorm(); }
+ 
+template<typename OtherDerived>
+inline RealScalar distanceTo(const MatrixBase<OtherDerived>& other) const
+{ return internal::sqrt(derived().squaredDistanceTo(other)); }
+ 
+inline void scaleTo(RealScalar l) { RealScalar vl = norm(); if (vl>1e-9) derived() *= (l/vl); }
+ 
+inline Transpose<Derived> transposed() {return this->transpose();}
+inline const Transpose<Derived> transposed() const {return this->transpose();}
+ 
+inline uint minComponentId(void) const  { int i; this->minCoeff(&i); return i; }
+inline uint maxComponentId(void) const  { int i; this->maxCoeff(&i); return i; }
+ 
+template<typename OtherDerived>
+void makeFloor(const MatrixBase<OtherDerived>& other) { derived() = derived().cwiseMin(other.derived()); }
+template<typename OtherDerived>
+void makeCeil(const MatrixBase<OtherDerived>& other) { derived() = derived().cwiseMax(other.derived()); }
+ 
+const CwiseBinaryOp<internal::scalar_sum_op<Scalar>, const Derived, const ConstantReturnType>
+operator+(const Scalar& scalar) const
+{ return CwiseBinaryOp<internal::scalar_sum_op<Scalar>, const Derived, const ConstantReturnType>(derived(), Constant(rows(),cols(),scalar)); }
+ 
+friend const CwiseBinaryOp<internal::scalar_sum_op<Scalar>, const ConstantReturnType, Derived>
+operator+(const Scalar& scalar, const MatrixBase<Derived>& mat)
+{ return CwiseBinaryOp<internal::scalar_sum_op<Scalar>, const ConstantReturnType, Derived>(Constant(rows(),cols(),scalar), mat.derived()); }
+```
+
+然后可以在 `config.h` 或项目的任何先决条件头文件中进行以下声明：
+
+```cpp
+#define EIGEN_MATRIXBASE_PLUGIN "MatrixBaseAddons.h"
+```
+
+
+
+
+
+
 
 ## 7.2 继承 Matrix
 
