@@ -6096,13 +6096,193 @@ Affine3f m;     m  = Translation3f(..);     Affine3f m;   m = Matrix3f(..);
 
 
 
+### 仿射变换
+
+通用仿射变换由`Transform`类表示，其内部实际上是一个 $(Dim+1)^2$ 矩阵。在Eigen中不区分点和向量，因此所有点实际上都由从原点的位移向量表示（$p≡p−0$）。考虑到这一点，当应用变换时，真实点和向量是有区别的。
+
+#### 将变换应用于点
+
+```cpp
+VectorNf p1, p2;
+p2 = t * p1;
+```
+
+ 
+
+#### 将变换应用于向量
+
+```cpp
+VectorNf vec1, vec2;
+vec2 = t.linear() * vec1;
+```
 
 
 
+#### 将一般变换应用到法向量
+
+```cpp
+VectorNf n1, n2;
+MatrixNf normalMatrix = t.linear().inverse().transpose();
+n2 = (normalMatrix * n1).normalized();
+```
 
 
 
+#### 将纯旋转变换应用到法向量（无缩放，无剪切）
 
+```cpp
+n2 = t.linear() * n1;
+```
+
+
+
+#### OpenGL 3D 兼容性
+
+```cpp
+glLoadMatrixf(t.data());
+```
+
+
+
+#### OpenGL 2D 兼容性
+
+```cpp
+Affine3f aux(Affine3f::Identity());
+aux.linear().topLeftCorner<2,2>() = t.linear();
+aux.translation().start<2>() = t.translation();
+glLoadMatrixf(aux.data());
+```
+
+
+
+### 组件访问器
+
+#### 对内部矩阵的完全读写访问
+
+```cpp
+t.matrix() = matN1xN1;    // N1 means N+1
+matN1xN1 = t.matrix();
+```
+
+
+
+#### 访问系数
+
+```cpp
+t(i,j) = scalar;   <=>   t.matrix()(i,j) = scalar;
+scalar = t(i,j);   <=>   scalar = t.matrix()(i,j);
+```
+
+
+
+#### 变换部分
+
+```cpp
+t.translation() = vecN;
+vecN = t.translation();
+```
+
+
+
+#### 线性部分
+
+```cpp
+t.linear() = matNxN;
+matNxN = t.linear();
+```
+
+
+
+#### 提取旋转矩阵
+
+```cpp
+matNxN = t.rotation();
+```
+
+
+
+### 创建变换
+
+虽然可以通过连接基本变换来创建和更新变换对象，但 `Transform` 类还具有过程式 API：
+
+#### Translation
+
+```cpp
+// 过程式API
+t.translate(Vector_(tx,ty,..));
+t.pretranslate(Vector_(tx,ty,..));
+// 等效的自然API
+t *= Translation_(tx,ty,..);
+t = Translation_(tx,ty,..) * t;
+```
+
+
+
+#### Rotation
+
+在 2D 和过程式 API 中，`any_rotation` 也可以是一个以弧度表示的角
+
+```cpp
+// 过程式API
+t.rotate(any_rotation);
+t.prerotate(any_rotation);
+// 等效的自然API
+t *= any_rotation;
+t = any_rotation * t;
+```
+
+
+
+#### Scaling
+
+```cpp
+// 过程式API
+t.scale(Vector_(sx,sy,..));
+t.scale(s);
+t.prescale(Vector_(sx,sy,..));
+t.prescale(s);
+// 等效的自然API
+t *= Scaling(sx,sy,..);
+t *= Scaling(s);
+t = Scaling(sx,sy,..) * t;
+t = Scaling(s) * t;
+```
+
+
+
+#### Shear transformation(剪切变换)
+
+仅限于 2D
+
+```cpp
+// 过程式API
+t.shear(sx,sy);
+t.preshear(sx,sy);
+```
+
+
+
+请注意，在这些 API 中，任意多个变换都可以连接在单个表达式中，如以下两个等效示例所示：
+
+```cpp
+t.pretranslate(..).rotate(..).translate(..).scale(..);
+t = Translation_(..) * t * RotationType(..) * Translation_(..) * Scaling(..);
+```
+
+
+
+### 欧拉角
+
+欧拉角是创建旋转对象的方便工具。由于存在24种不同的惯例，它们使用起来非常令人困惑。本例演示如何按照2-1-2惯例创建旋转矩阵。
+
+> 这里[官方文档](http://eigen.tuxfamily.org/dox/group__TutorialGeometry.html#title3)没给出更多信息，如你有相关更多信息，欢迎留言。
+
+```cpp
+Matrix3f m;
+m = AngleAxisf(angle1, Vector3f::UnitZ())
+    * AngleAxisf(angle2, Vector3f::UnitY())
+    * AngleAxisf(angle3, Vector3f::UnitZ());
+```
 
 
 
