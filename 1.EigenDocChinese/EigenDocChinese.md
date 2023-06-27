@@ -6549,15 +6549,83 @@ namespace Eigen {
 
 ### 示例 1：循环矩阵
 
+为了探索这些可能性，让我们从实现新表达式的循环矩阵示例开始。回想一下，循环矩阵是一个矩阵，其中每列与左侧的列相同，只是向下循环移位。例如，这是一个`4x4`的循环矩阵：
+$$
+\begin{bmatrix} 1&8&4&2 \\ 2&1&8&4 \\ 4&2&1&8 \\ 8&4&2&1 \end{bmatrix}
+$$
+循环矩阵由其第一列唯一确定。我们希望编写一个函数 `makeCirculant`，在给定第一列的情况下，返回一个表示循环矩阵的表达式。
 
+在这个练习中，`makeCirculant`的返回类型将是一个`CwiseNullaryOp`，我们需要用以下内容进行实例化：
 
+- 一个适当的`circulant_functor`，其中存储输入向量并实现适当的系数访问运算符`(i，j)`
+- 一个矩阵类的模板实例化，传递编译时信息，如标量类型，大小和首选存储布局。
 
+将 `ArgType` 称为输入向量的类型，我们可以构造等效的平方 `Matrix` 类型，如下所示：
 
+```cpp
+template <class ArgType>
+Eigen::CwiseNullaryOp<circulant_functor<ArgType>, typename circulant_helper<ArgType>::MatrixType>
+makeCirculant(const Eigen::MatrixBase<ArgType>& arg)
+{
+  typedef typename circulant_helper<ArgType>::MatrixType MatrixType;
+  return MatrixType::NullaryExpr(arg.size(), arg.size(), circulant_functor<ArgType>(arg.derived()));
+}
+```
 
+这个小辅助结构将帮助我们实现 `makeCirculant` 函数，如下所示：
 
+```cpp
+template <class ArgType>
+Eigen::CwiseNullaryOp<circulant_functor<ArgType>, typename circulant_helper<ArgType>::MatrixType>
+makeCirculant(const Eigen::MatrixBase<ArgType>& arg)
+{
+  typedef typename circulant_helper<ArgType>::MatrixType MatrixType;
+  return MatrixType::NullaryExpr(arg.size(), arg.size(), circulant_functor<ArgType>(arg.derived()));
+}
+```
 
+函数采用 `MatrixBase ` 作为参数（有关更多详细信息，请参阅[此页](http://eigen.tuxfamily.org/dox/TopicFunctionTakingEigenTypes.html)）。然后，通过 `DenseBase::NullaryExpr` 静态方法以足够的运行时大小构造 `CwiseNullaryOp` 对象。
 
+接下来，需要实现 `circulant_functor`，这是一个简单的练习：
 
+```cpp
+template<class ArgType>
+class circulant_functor {
+  const ArgType &m_vec;
+public:
+  circulant_functor(const ArgType& arg) : m_vec(arg) {}
+ 
+  const typename ArgType::Scalar& operator() (Eigen::Index row, Eigen::Index col) const {
+    Eigen::Index index = row - col;
+    if (index < 0) index += m_vec.size();
+    return m_vec(index);
+  }
+};
+```
+
+现在我们已经准备好尝试我们的新功能了：
+
+```cpp
+int main()
+{
+    Eigen::VectorXd vec(4);
+    vec << 1, 2, 4, 8;
+    Eigen::MatrixXd mat;
+    mat = makeCirculant(vec);
+    std::cout << mat << std::endl;
+}
+```
+
+如果组合所有片段，则会产生以下输出，表明程序按预期工作：
+
+```
+1 8 4 2
+2 1 8 4
+4 2 1 8
+8 4 2 1
+```
+
+`makeCirculant` 的这种实现比从头开始[定义新表达式](http://eigen.tuxfamily.org/dox/TopicNewExpressionType.html)要简单得多。
 
 
 
