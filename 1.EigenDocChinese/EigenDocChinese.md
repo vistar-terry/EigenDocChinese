@@ -6361,11 +6361,74 @@ operator+(const Scalar& scalar, const MatrixBase<Derived>& mat)
 
 
 
-
-
-
-
 ## 7.2 继承 Matrix
+
+[英文原文(Inheriting from Matrix)](http://eigen.tuxfamily.org/dox/TopicCustomizing_InheritingMatrix.html)
+
+在从Matrix继承之前，请确定使用 `EIGEN_MATRIX_PLUGIN` 不是您真正想要的（请参见前一节）。如果只需要向Matrix添加几个成员，那么继承Matrix就是正确的方法。
+
+当有多层继承关系，例如 `MyVerySpecificVector1, MyVerySpecificVector2 -> MyVector1 -> Matrix` 和 `MyVerySpecificVector3, MyVerySpecificVector4 -> MyVector2 -> Matrix` ，这时需要继承Matrix。
+
+为了使对象在 Eigen 框架内工作，需要在继承的类中定义一些成员，如下：
+
+```cpp
+#include <Eigen/Core>
+#include <iostream>
+ 
+class MyVectorType : public Eigen::VectorXd
+{
+public:
+    MyVectorType(void):Eigen::VectorXd() {}
+ 
+    // This constructor allows you to construct MyVectorType from Eigen expressions
+    template<typename OtherDerived>
+    MyVectorType(const Eigen::MatrixBase<OtherDerived>& other)
+        : Eigen::VectorXd(other)
+    { }
+ 
+    // This method allows you to assign Eigen expressions to MyVectorType
+    template<typename OtherDerived>
+    MyVectorType& operator=(const Eigen::MatrixBase <OtherDerived>& other)
+    {
+        this->Eigen::VectorXd::operator=(other);
+        return *this;
+    }
+};
+ 
+int main()
+{
+    MyVectorType v = MyVectorType::Ones(4);
+    v(2) += 10;
+    v = 2 * v;
+    std::cout << v.transpose() << std::endl;
+}
+```
+
+输出：
+
+```
+2  2 22  2
+```
+
+如果不提供这些方法，可能会遇到这种错误：
+
+```
+error: no match for ‘operator=’ in ‘v = Eigen::operator*(
+const Eigen::MatrixBase<Eigen::Matrix<double, -0x000000001, 1, 0, -0x000000001, 1> >::Scalar&, 
+const Eigen::MatrixBase<Eigen::Matrix<double, -0x000000001, 1> >::StorageBaseType&)
+(((const Eigen::MatrixBase<Eigen::Matrix<double, -0x000000001, 1> >::StorageBaseType&)
+((const Eigen::MatrixBase<Eigen::Matrix<double, -0x000000001, 1> >::StorageBaseType*)(& v))))’
+```
+
+
+
+
+
+
+
+
+
+
 
 ## 7.3 使用自定义标量类型
 
