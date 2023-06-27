@@ -6422,17 +6422,156 @@ const Eigen::MatrixBase<Eigen::Matrix<double, -0x000000001, 1> >::StorageBaseTyp
 
 
 
-
-
-
-
-
-
-
-
 ## 7.3 使用自定义标量类型
 
+[英文原文(Using custom scalar types)](http://eigen.tuxfamily.org/dox/TopicCustomizing_CustomScalar.html)
+
+默认情况下，Eigen目前支持标准浮点类型（`float`、`double`、`std::complex<float>`、`std::complex<double>`、`long double`），以及所有原生的整型（`int`、`unsigned int`、`short`等）和`bool`类型。在`x86-64`系统上，`long double`允许本地强制使用带扩展精度的x87寄存器（相对于SSE）。
+
+为了添加对自定义类型 T 的支持，需要：
+
+- 确保类型 `T` 支持常用运算符（+、-、*、/等）
+- 添加 `struct Eigen::NumTraits<T>` 的特殊化（请参阅 [NumTraits](http://eigen.tuxfamily.org/dox/structEigen_1_1NumTraits.html)）
+- 定义对自定义类型有意义的数学函数。包括标准的 `sqrt`、`pow`、`sin`、`tan`、`conj`、`real`、`imag` 等，以及 Eigen 特定的 `abs2`。(请参阅文件 [Eigen/src/Core/MathFunctions.h](http://eigen.tuxfamily.org/dox/MathFunctions_8h_source.html))
+
+数学函数应该定义在与 `T` 相同的命名空间中，或者定义在 `std` 命名空间中，但不建议使用第二种方法。
+
+下面是一个添加对 `Adolc` 的 `adouble` 类型支持的具体示例。 `Adolc` 是一个自动微分库。 `adouble` 类型基本上是跟踪任意数量的偏导数值的实值。
+
+```cpp
+#ifndef ADOLCSUPPORT_H
+#define ADOLCSUPPORT_H
+ 
+#define ADOLC_TAPELESS
+#include <adolc/adouble.h>
+#include <Eigen/Core>
+ 
+namespace Eigen {
+ 
+template<> struct NumTraits<adtl::adouble>
+ : NumTraits<double> // permits to get the epsilon, dummy_precision, lowest, highest functions
+{
+  typedef adtl::adouble Real;
+  typedef adtl::adouble NonInteger;
+  typedef adtl::adouble Nested;
+ 
+  enum {
+    IsComplex = 0,
+    IsInteger = 0,
+    IsSigned = 1,
+    RequireInitialization = 1,
+    ReadCost = 1,
+    AddCost = 3,
+    MulCost = 3
+  };
+};
+ 
+}
+ 
+namespace adtl {
+ 
+inline const adouble& conj(const adouble& x)  { return x; }
+inline const adouble& real(const adouble& x)  { return x; }
+inline adouble imag(const adouble&)    { return 0.; }
+inline adouble abs(const adouble&  x)  { return fabs(x); }
+inline adouble abs2(const adouble& x)  { return x*x; }
+ 
+}
+ 
+#endif // ADOLCSUPPORT_H
+```
+
+这个例子增加了对`GMP`库中`mpq_class`类型的支持。它特别展示了如何在`LU`分解过程中改变Eigen选择最佳主元的方法。它选择具有最高分数的系数作为主元，在默认情况下分数是数字的绝对值，但我们可以定义不同的分数，比如更喜欢具有更紧凑表示的主元（这只是一个例子，不是建议）。请注意，分数应始终为非负数，并且只允许零具有零的分数。此外，这可能会与不精确标量类型的阈值产生不良交互。
+
+```cpp
+#include <gmpxx.h>
+#include <Eigen/Core>
+#include <boost/operators.hpp>
+ 
+namespace Eigen {
+  template<> struct NumTraits<mpq_class> : GenericNumTraits<mpq_class>
+  {
+    typedef mpq_class Real;
+    typedef mpq_class NonInteger;
+    typedef mpq_class Nested;
+ 
+    static inline Real epsilon() { return 0; }
+    static inline Real dummy_precision() { return 0; }
+    static inline int digits10() { return 0; }
+ 
+    enum {
+      IsInteger = 0,
+      IsSigned = 1,
+      IsComplex = 0,
+      RequireInitialization = 1,
+      ReadCost = 6,
+      AddCost = 150,
+      MulCost = 100
+    };
+  };
+ 
+  namespace internal {
+ 
+    template<> struct scalar_score_coeff_op<mpq_class> {
+      struct result_type : boost::totally_ordered1<result_type> {
+        std::size_t len;
+        result_type(int i = 0) : len(i) {} // Eigen uses Score(0) and Score()
+        result_type(mpq_class const& q) :
+          len(mpz_size(q.get_num_mpz_t())+
+              mpz_size(q.get_den_mpz_t())-1) {}
+        friend bool operator<(result_type x, result_type y) {
+          // 0 is the worst possible pivot
+          if (x.len == 0) return y.len > 0;
+          if (y.len == 0) return false;
+          // Prefer a pivot with a small representation
+          return x.len > y.len;
+        }
+        friend bool operator==(result_type x, result_type y) {
+          // Only used to test if the score is 0
+          return x.len == y.len;
+        }
+      };
+      result_type operator()(mpq_class const& x) const { return x; }
+    };
+  }
+}
+```
+
+
+
 ## 7.4 使用nullary-expressions操作矩阵
+
+[英文原文(Matrix manipulation via nullary-expressions)](http://eigen.tuxfamily.org/dox/TopicCustomizing_NullaryExpr.html)
+
+`CwiseNullaryOp` 类的主要目的是定义过程矩阵，例如由`Ones()`、`Zero()`、`Constant()`、`Identity()`和`Random()`方法返回的常量或随机矩阵。然而，通过一些想象力，可以用最小的努力实现非常复杂的矩阵操作，因此很少需要实现新的表达式。
+
+
+
+### 示例 1：循环矩阵
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## 7.5 添加新的表达式类型
 
