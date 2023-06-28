@@ -6915,33 +6915,321 @@ int main()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # 八、常见话题
 
 ## 8.1 编写以特征类型为参数的函数
+
+[英文原文(Writing Functions Taking Eigen Types as Parameters)](http://eigen.tuxfamily.org/dox/TopicFunctionTakingEigenTypes.html)
+
+Eigen使用表达式模板的方式导致每个表达式的类型可能都不同。如果将这样的表达式传递给一个需要Matrix类型参数的函数，则表达式将隐式地被评估为一个临时Matrix，然后再传递给函数。这意味着失去了表达式模板的好处。具体而言，这有两个缺点：
+
+- 将表达式评估为临时变量可能是无用且低效的；
+- 这会限制函数只能读取表达式，无法对表达式进行修改。
+
+幸运的是，所有这些表达式类型都有一些共同的基类和模板。通过让函数接受这些基类的模板参数，可以让它们与Eigen的表达式模板很好地协作。
+
+
+
+### 一些开始的示例
+
+本节将为 Eigen 提供的不同类型的对象提供简单的示例。在开始实际示例之前，我们需要概括一下可以使用哪些基础对象（另请参阅[类层次结构](http://eigen.tuxfamily.org/dox/TopicClassHierarchy.html)）。
+
+- [MatrixBase](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html)：所有稠密矩阵表达式的公共基类（与数组表达式相对，与稀疏和特殊矩阵类相对）。在仅适用于稠密矩阵的函数中使用它。
+- [ArrayBase](http://eigen.tuxfamily.org/dox/classEigen_1_1ArrayBase.html)：所有稠密数组表达式（与矩阵表达式相对）的公共基类。在仅适用于数组的函数中使用它。
+- [DenseBase](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html)：所有稠密矩阵表达式的公共基类，即`MatrixBase`和`ArrayBase`的基类。它可以用在同时适用于矩阵和数组的函数中。
+- [EigenBase](http://eigen.tuxfamily.org/dox/structEigen_1_1EigenBase.html)：该基类统一了可以被计算为稠密矩阵或数组的所有对象类型，例如对角矩阵、置换矩阵等特殊的矩阵类。它可以用于处理任何此类通用类型的函数中。
+
+#### EigenBase示例
+
+打印 Eigen 中存在的最通用对象的尺寸。它可以是任何矩阵表达式、任何稠密或稀疏矩阵以及任何数组。
+
+```cpp
+#include <iostream>
+#include <Eigen/Core>
+ 
+template <typename Derived>
+void print_size(const Eigen::EigenBase<Derived>& b)
+{
+  std::cout << "size (rows, cols): " << b.size() << " (" << b.rows()
+            << ", " << b.cols() << ")" << std::endl;
+}
+ 
+int main()
+{
+    Eigen::Vector3f v;
+    print_size(v);
+    // v.asDiagonal() returns a 3x3 diagonal matrix pseudo-expression
+    print_size(v.asDiagonal());
+}
+```
+
+输出：
+
+```
+size (rows, cols): 3 (3, 1)
+size (rows, cols): 9 (3, 3
+```
+
+
+
+#### DenseBase示例
+
+打印稠密表达式的子块。接受任何稠密矩阵或数组表达式，但不接受稀疏对象，也不接受特殊矩阵类（例如 `DiagonalMatrix`）。
+
+```cpp
+template <typename Derived>
+void print_block(const DenseBase<Derived>& b, int x, int y, int r, int c)
+{
+	std::cout << "block: " << b.block(x,y,r,c) << std::endl;
+}
+```
+
+
+
+#### ArrayBase示例
+
+打印数组或数组表达式的最大系数。
+
+```cpp
+template <typename Derived>
+void print_max_coeff(const ArrayBase<Derived> &a)
+{
+	std::cout << "max: " << a.maxCoeff() << std::endl;
+}
+```
+
+
+
+#### MatrixBase示例
+
+打印给定矩阵或矩阵表达式的逆条件数。
+
+```cpp
+template <typename Derived>
+void print_inv_cond(const MatrixBase<Derived>& a)
+{
+    const typename JacobiSVD<typename Derived::PlainObject>::SingularValuesType& sing_vals = a.jacobiSvd().singularValues();
+    std::cout << "inv cond: " << sing_vals(sing_vals.size()-1) / sing_vals(0) << std::endl;
+}
+```
+
+
+
+#### 多个模板化参数示例
+
+计算两点之间的欧几里德距离。
+
+```cpp
+template <typename DerivedA,typename DerivedB>
+typename DerivedA::Scalar squaredist(const MatrixBase<DerivedA>& p1,const MatrixBase<DerivedB>& p2)
+{
+	return (p1-p2).squaredNorm();
+}
+```
+
+请注意，我们使用了两个模板参数，每个参数一个。这允许函数处理不同类型的输入，例如:
+
+```cpp
+squaredist(v1,2*v2)
+```
+
+其中第一个参数 `v1` 是向量，第二个参数 `2*v2` 是表达式。
+
+
+
+这些示例只是为了让读者对如何编写接受普通和常量Matrix或Array参数的函数有第一印象。它们还旨在为读者提供有关最常见基类是作为函数的最佳候选的想法。在下一节中，将更详细地说明一个示例以及可以实现它的不同方式，同时讨论每个实现的问题和优点。在下面的讨论中，`Matrix`和`Array`以及`MatrixBase`和`ArrayBase`可以互换使用，所有参数仍然保持不变。
+
+
+
+### 如何编写通用但非模板化的函数？
+
+在所有以前的示例中，函数都必须是模板函数。这种方法允许编写非常通用的代码，但通常希望编写非模板函数并仍然保持一定程度的通用性，以避免对参数进行愚蠢的复制。典型的例子是编写接受`MatrixXf`或`MatrixXf`块的函数。这正是[Ref](http://eigen.tuxfamily.org/dox/classEigen_1_1Ref.html)类的目的。这里是一个简单的例子：
+
+```cpp
+#include <iostream>
+#include <Eigen/SVD>
+ 
+float inv_cond(const Eigen::Ref<const Eigen::MatrixXf>& a)
+{
+  const Eigen::VectorXf sing_vals = a.jacobiSvd().singularValues();
+  return sing_vals(sing_vals.size()-1) / sing_vals(0);
+}
+ 
+int main()
+{
+  Eigen::MatrixXf m = Eigen::MatrixXf::Random(4, 4);
+  std::cout << "matrix m:\n" << m << "\n\n";
+  std::cout << "inv_cond(m):          " << inv_cond(m)                      << "\n";
+  std::cout << "inv_cond(m(1:3,1:3)): " << inv_cond(m.topLeftCorner(3,3))   << "\n";
+  std::cout << "inv_cond(m+I):        " << inv_cond(m+Eigen::MatrixXf::Identity(4, 4)) << "\n";
+}
+```
+
+输出：
+
+```
+matrix m:
+   0.68   0.823  -0.444   -0.27
+ -0.211  -0.605   0.108  0.0268
+  0.566   -0.33 -0.0452   0.904
+  0.597   0.536   0.258   0.832
+
+inv_cond(m):          0.0562343
+inv_cond(m(1:3,1:3)): 0.0836819
+inv_cond(m+I):        0.160204
+```
+
+在对`inv_cond`的前两个调用中，不会发生复制，因为参数的内存布局与`Ref <MatrixXf>`接受的内存布局匹配。然而，在最后一次调用中，我们有一个通用表达式，将通过`Ref <>`对象自动评估为一个临时的`MatrixXf`。
+
+`Ref`对象也可以是可写的。这是一个计算两个输入矩阵的协方差矩阵的函数示例，其中每行都是一个观测值：
+
+```cpp
+void cov(const Ref<const MatrixXf> x, const Ref<const MatrixXf> y, Ref<MatrixXf> C)
+{
+  const float num_observations = static_cast<float>(x.rows());
+  const RowVectorXf x_mean = x.colwise().sum() / num_observations;
+  const RowVectorXf y_mean = y.colwise().sum() / num_observations;
+  C = (x.rowwise() - x_mean).transpose() * (y.rowwise() - y_mean) / num_observations;
+}
+```
+
+下面是两个不带任何副本调用 `cov` 的示例：
+
+```cpp
+MatrixXf m1, m2, m3
+cov(m1, m2, m3);
+cov(m1.leftCols<3>(), m2.leftCols<3>(), m3.topLeftCorner<3,3>());
+```
+
+`Ref<>` 类还有另外两个可选模板参数，允许控制无需任何副本即可接受的内存布局类型。有关详细信息，请参阅类 [Ref 文档](http://eigen.tuxfamily.org/dox/classEigen_1_1Ref.html)。
+
+
+
+### 采用普通矩阵或数组参数的函数在哪些情况下有效？
+
+如果不使用模板函数，并且没有 `Ref` 类，先前 `cov` 函数的简单实现可能如下所示：
+
+```cpp
+MatrixXf cov(const MatrixXf& x, const MatrixXf& y)
+{
+  const float num_observations = static_cast<float>(x.rows());
+  const RowVectorXf x_mean = x.colwise().sum() / num_observations;
+  const RowVectorXf y_mean = y.colwise().sum() / num_observations;
+  return (x.rowwise() - x_mean).transpose() * (y.rowwise() - y_mean) / num_observations;
+}
+```
+
+与一开始想的相反，除非需要一个可以与双矩阵一起使用的通用实现，否则这个实现是可以的，除非不关心临时对象。为什么会这样？哪些地方涉及到临时变量？下面给出的代码是如何编译的？
+
+```cpp
+MatrixXf x,y,z;
+MatrixXf C = cov(x,y+z);
+```
+
+在这种特殊情况下，示例是可以的并且能够工作，因为两个参数都声明为`const`引用。编译器会创建一个临时变量，将表达式`x+z`计算到这个临时变量中。一旦函数运行完成，临时变量就会被释放，并将结果分配给`C`。
+
+注意：对 `Matrix`（或 `Array`）进行 `const` 引用的函数可以以临时变量为代价来处理表达式。
+
+
+
+### 在哪些情况下，采用普通矩阵或数组参数的函数会失败？
+
+在这里，我们考虑上面给出的函数的稍微修改版。这一次，我们不想返回结果，而是传递一个额外的非常量参数，以便我们可以存储结果。一个第一次的朴素实现可能如下所示：
+
+```cpp
+// Note: This code is flawed!
+void cov(const MatrixXf& x, const MatrixXf& y, MatrixXf& C)
+{
+  const float num_observations = static_cast<float>(x.rows());
+  const RowVectorXf x_mean = x.colwise().sum() / num_observations;
+  const RowVectorXf y_mean = y.colwise().sum() / num_observations;
+  C = (x.rowwise() - x_mean).transpose() * (y.rowwise() - y_mean) / num_observations;
+}
+```
+
+当尝试执行以下代码时：
+
+```cpp
+MatrixXf C = MatrixXf::Zero(3,6);
+cov(x,y, C.block(0,0,3,3));
+```
+
+编译器会失败，因为将 `MatrixXf::block()` 返回的表达式转换为非常量 `MatrixXf&` 是不可能的。这是因为编译器希望避免将结果写入临时对象的风险。在这种特殊情况下，这种保护并不适用 - 如果想要写入临时对象。那么我们如何解决这个问题呢？
+
+目前首选的解决方案是基于一点技巧。需要将常量引用传递给矩阵，并且需要在内部丢弃常量。 `C98` 兼容编译器的正确实现是：
+
+```cpp
+template <typename Derived, typename OtherDerived>
+void cov(const MatrixBase<Derived>& x, const MatrixBase<Derived>& y, MatrixBase<OtherDerived> const & C)
+{
+  typedef typename Derived::Scalar Scalar;
+  typedef typename internal::plain_row_type<Derived>::type RowVectorType;
+ 
+  const Scalar num_observations = static_cast<Scalar>(x.rows());
+ 
+  const RowVectorType x_mean = x.colwise().sum() / num_observations;
+  const RowVectorType y_mean = y.colwise().sum() / num_observations;
+ 
+  const_cast< MatrixBase<OtherDerived>& >(C) =
+    (x.rowwise() - x_mean).transpose() * (y.rowwise() - y_mean) / num_observations;
+}
+```
+
+上面的实现现在不仅可以使用临时表达式，而且还允许使用具有任意浮点标量类型的矩阵的函数。 
+
+注意：`const cast` 仅适用于模板化函数。它不适用于 `MatrixXf `实现，因为无法将 `Block` 表达式转换为 `Matrix `引用！
+
+
+
+### 如何在通用实现中调整矩阵大小？
+
+为了使协方差函数具有普遍适用性，有如下代码：
+
+```cpp
+MatrixXf x = MatrixXf::Random(100,3);
+MatrixXf y = MatrixXf::Random(100,3);
+MatrixXf C;
+cov(x, y, C);
+```
+
+当我们使用以 `MatrixBase` 为参数的实现时，情况就不同了。一般来说，Eigen 支持自动调整大小，但不能在表达式上这样做。为什么要允许重调矩阵块大小？它是一个子矩阵的引用，我们绝对不想重调它的大小。那么，如果我们不能在 `MatrixBase` 上调整大小，如何合并调整大小呢？解决方法是调整派生对象的大小，如此实现：
+
+```cpp
+template <typename Derived, typename OtherDerived>
+void cov(const MatrixBase<Derived>& x, const MatrixBase<Derived>& y, MatrixBase<OtherDerived> const & C_)
+{
+  typedef typename Derived::Scalar Scalar;
+  typedef typename internal::plain_row_type<Derived>::type RowVectorType;
+ 
+  const Scalar num_observations = static_cast<Scalar>(x.rows());
+ 
+  const RowVectorType x_mean = x.colwise().sum() / num_observations;
+  const RowVectorType y_mean = y.colwise().sum() / num_observations;
+ 
+  MatrixBase<OtherDerived>& C = const_cast< MatrixBase<OtherDerived>& >(C_);
+  
+  C.derived().resize(x.cols(),x.cols()); // resize the derived object
+  C = (x.rowwise() - x_mean).transpose() * (y.rowwise() - y_mean) / num_observations;
+}
+```
+
+这个实现现在可以处理参数为表达式和参数为矩阵且尺寸大小不正确的情况。在这种情况下，调整表达式的大小不会有任何问题，除非它们确实需要调整。这意味着，传递一个尺寸不正确的表达式将导致运行时错误（仅在调试模式下），而传递尺寸正确的表达式将正常工作。
+
+注意：在上面的讨论中，术语 `Matrix` 和 `Array` 以及 `MatrixBase` 和 `ArrayBase` 可以互换，并且所有参数仍然有效。
+
+
+
+### 总结
+
+- 总之，采用不可写（const 引用）对象作为函数参数的实现并不是一个大问题，也不会在编译和运行程序方面导致问题。然而，一个简单的实现可能会在代码中引入不必要的临时对象。为了避免将参数转换为临时对象，将它们作为（`const`）引用传递给 `MatrixBase` 或 `ArrayBase`（因此将函数模板化）。
+- 需要接受可写的（非 const）参数的函数必须采用 `const` 引用，并在函数体内强制转换 `const` 属性。
+- 接受 `MatrixBase`（或 `ArrayBase`）对象作为参数的函数，如果这些对象可以调整大小（即重置大小），则必须在派生类上调用 `resize()`函数，由 `derived()` 返回。
+
+
+
+
+
+
 
 ## 8.2 预处理器指令
 
