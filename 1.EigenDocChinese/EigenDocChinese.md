@@ -6629,19 +6629,313 @@ int main()
 
 
 
+### 示例 2：索引行和列
 
+这里的目标是模仿 MatLab，使用两个索引向量分别引用要选取的行和列来索引矩阵，如下所示：
 
+```cpp
+A =
+ 7  9 -5 -3
+-2 -6  1  0
+ 6 -3  0  9
+ 6  6  3  9
+ 
+A([1 2 1], [3 2 1 0 0 2]) =
+ 0  1 -6 -2 -2  1
+ 9  0 -3  6  6  0
+ 0  1 -6 -2 -2  1
+```
 
+为此，首先编写一个零元函数对象，存储对输入矩阵和两个索引数组的引用，并实现所需的`operator() (i，j)`：
 
+```cpp
+template<class ArgType, class RowIndexType, class ColIndexType>
+class indexing_functor {
+  const ArgType &m_arg;
+  const RowIndexType &m_rowIndices;
+  const ColIndexType &m_colIndices;
+public:
+  typedef Eigen::Matrix<typename ArgType::Scalar,
+                 RowIndexType::SizeAtCompileTime,
+                 ColIndexType::SizeAtCompileTime,
+                 ArgType::Flags&Eigen::RowMajorBit?Eigen::RowMajor:Eigen::ColMajor,
+                 RowIndexType::MaxSizeAtCompileTime,
+                 ColIndexType::MaxSizeAtCompileTime> MatrixType;
+ 
+  indexing_functor(const ArgType& arg, const RowIndexType& row_indices, const ColIndexType& col_indices)
+    : m_arg(arg), m_rowIndices(row_indices), m_colIndices(col_indices)
+  {}
+ 
+  const typename ArgType::Scalar& operator() (Eigen::Index row, Eigen::Index col) const {
+    return m_arg(m_rowIndices[row], m_colIndices[col]);
+  }
+};
+```
 
+然后，创建一个 `indexing(A,rows,cols)` 函数来创建这个零元表达式(nullary expression)：
 
+```cpp
+template <class ArgType, class RowIndexType, class ColIndexType>
+Eigen::CwiseNullaryOp<indexing_functor<ArgType,RowIndexType,ColIndexType>, typename indexing_functor<ArgType,RowIndexType,ColIndexType>::MatrixType>
+mat_indexing(const Eigen::MatrixBase<ArgType>& arg, const RowIndexType& row_indices, const ColIndexType& col_indices)
+{
+  typedef indexing_functor<ArgType,RowIndexType,ColIndexType> Func;
+  typedef typename Func::MatrixType MatrixType;
+  return MatrixType::NullaryExpr(row_indices.size(), col_indices.size(), Func(arg.derived(), row_indices, col_indices));
+}
+```
 
+最后，这是一个如何使用该函数的示例：
 
+```cpp
+Eigen::MatrixXi A = Eigen::MatrixXi::Random(4,4);
+Eigen::Array3i ri(1,2,1);
+Eigen::ArrayXi ci(6); ci << 3,2,1,0,0,2;
+Eigen::MatrixXi B = mat_indexing(A, ri, ci);
+std::cout << "A =" << std::endl;
+std::cout << A << std::endl << std::endl;
+std::cout << "A([" << ri.transpose() << "], [" << ci.transpose() << "]) =" << std::endl;
+std::cout << B << std::endl;
+```
 
+这种简单的实现已经非常强大，因为行或列索引数组也可以是执行偏移、取模、跨步、反转等的表达式。
+
+```cpp
+B =  mat_indexing(A, ri+1, ci);
+std::cout << "A(ri+1,ci) =" << std::endl;
+std::cout << B << std::endl << std::endl;
+B =  mat_indexing(A, Eigen::ArrayXi::LinSpaced(13,0,12).unaryExpr([](int x){return x%4;}), Eigen::ArrayXi::LinSpaced(4,0,3));
+std::cout << "A(ArrayXi::LinSpaced(13,0,12).unaryExpr([](int x){return x%4;}), ArrayXi::LinSpaced(4,0,3)) =" << std::endl;
+std::cout << B << std::endl << std::endl;
+```
+
+输出如下：
+
+```cpp
+A(ri+1,ci) =
+ 9  0 -3  6  6  0
+ 9  3  6  6  6  3
+ 9  0 -3  6  6  0
+ 
+A(ArrayXi::LinSpaced(13,0,12).unaryExpr([](int x){return x%4;}), ArrayXi::LinSpaced(4,0,3)) =
+ 7  9 -5 -3
+-2 -6  1  0
+ 6 -3  0  9
+ 6  6  3  9
+ 7  9 -5 -3
+-2 -6  1  0
+ 6 -3  0  9
+ 6  6  3  9
+ 7  9 -5 -3
+-2 -6  1  0
+ 6 -3  0  9
+ 6  6  3  9
+ 7  9 -5 -3
+
+```
 
 
 
 ## 7.5 添加新的表达式类型
+
+[英文原文(Adding a new expression type)](http://eigen.tuxfamily.org/dox/TopicNewExpressionType.html)
+
+本页面针对非常高级的用户，他们不害怕处理一些Eigen的内部细节。在大多数情况下，可以通过使用自定义一元或二元函数避免使用自定义表达式，而极其复杂的矩阵操作可以通过零元函数(nullary-expressions)来实现，如前一页所述。
+
+本页面通过示例介绍了如何在Eigen中实现新的轻量级表达式类型。它由三个部分组成：表达式类型本身、包含有关表达式编译时信息的特性类和评估器类，用于将表达式评估为矩阵。
+
+
+
+### 设定
+
+循环矩阵是每列与左边的列相同的矩阵，只不过它循环向下移位。例如，这是一个 4×4 循环矩阵：
+$$
+\begin{bmatrix} 1&8&4&2 \\ 2&1&8&4 \\ 4&2&1&8 \\ 8&4&2&1 \end{bmatrix}
+$$
+循环矩阵由其第一列唯一确定。我们希望编写一个函数 makeCirculant，在给定第一列的情况下，它返回一个表示循环矩阵的表达式。
+
+为简单起见，我们将 makeCirculant 函数限制为稠密矩阵。也允许数组或稀疏矩阵可能是有意义的，但我们不会在这里这样做。我们也不希望支持矢量化。
+
+
+
+### 开始
+
+我们将分部分介绍实现`makeCirculant`函数的文件。首先，我们包含适当的头文件并向前声明我们将称之为`Circulant`的表达式类。`makeCirculant`函数将返回此类型的对象。实际上，类`Circulant`是一个类模板；模板参数`ArgType`是传递给`makeCirculant`函数的向量的类型。
+
+```cpp
+#include <Eigen/Core>
+#include <iostream>
+ 
+template <class ArgType> class Circulant;
+```
+
+
+
+### Traits类
+
+对于每个表达式类 `X`，在 `Eigen::internal` 命名空间中应该有一个特征类 `Traits<X>`，其中包含有关 `X` 的信息（称为编译时）。
+
+如“设定”中所解释的，我们设计了`Circulant`表达式类来引用密集矩阵。循环矩阵的条目与传递给`makeCirculant`函数的向量的条目具有相同的类型。用于索引条目的类型也相同。为简单起见，我们仅返回列主矩阵。最后，循环矩阵是一个方阵（行数等于列数），行数等于传递给`makeCirculant`函数的列向量的行数。如果这是一个动态大小向量，则循环矩阵的大小在编译时是未知的。
+
+```cpp
+namespace Eigen {
+  namespace internal {
+    template <class ArgType>
+    struct traits<Circulant<ArgType> >
+    {
+      typedef Eigen::Dense StorageKind;
+      typedef Eigen::MatrixXpr XprKind;
+      typedef typename ArgType::StorageIndex StorageIndex;
+      typedef typename ArgType::Scalar Scalar;
+      enum { 
+        Flags = Eigen::ColMajor,
+        RowsAtCompileTime = ArgType::RowsAtCompileTime,
+        ColsAtCompileTime = ArgType::RowsAtCompileTime,
+        MaxRowsAtCompileTime = ArgType::MaxRowsAtCompileTime,
+        MaxColsAtCompileTime = ArgType::MaxRowsAtCompileTime
+      };
+    };
+  }
+}
+```
+
+
+
+### 表达式类
+
+接下来的步骤是定义表达式类本身。要继承自`MatrixBase`，以公开密集矩阵的接口。在构造函数中，我们检查是否传递了列向量（参见[断言](http://eigen.tuxfamily.org/dox/TopicAssertions.html)），并将用于构建循环矩阵的向量存储在成员变量m_arg中。最后，表达式类应计算相应循环矩阵的大小。如上所述，这是一个方阵，其列数与用于构造矩阵的向量一样多。
+
+```cpp
+template <class ArgType>
+class Circulant : public Eigen::MatrixBase<Circulant<ArgType> >
+{
+public:
+  Circulant(const ArgType& arg)
+    : m_arg(arg)
+  { 
+    EIGEN_STATIC_ASSERT(ArgType::ColsAtCompileTime == 1,
+                        YOU_TRIED_CALLING_A_VECTOR_METHOD_ON_A_MATRIX);
+  }
+ 
+  typedef typename Eigen::internal::ref_selector<Circulant>::type Nested; 
+ 
+  typedef Eigen::Index Index;
+  Index rows() const { return m_arg.rows(); }
+  Index cols() const { return m_arg.rows(); }
+ 
+  typedef typename Eigen::internal::ref_selector<ArgType>::type ArgTypeNested;
+  ArgTypeNested m_arg;
+};
+```
+
+
+
+### 评估器
+
+最后一个大片段实现了`Circulant`表达式的评估器。评估器计算循环矩阵的条目。这是在`.coeff()`成员函数中完成的。通过找到构成循环矩阵的向量的相应条目来计算这些条目。当循环矩阵是从给定复杂表达式的向量构建时，获取此条目可能实际上并不容易，因此我们使用对应于该向量的评估器。
+
+`CoeffReadCost` 常量记录计算循环矩阵一项的成本；我们忽略索引计算，并认为这与计算构建循环矩阵的向量条目的成本相同。
+
+在构造函数中，我们保存定义循环矩阵的列向量的求值器。还保存该向量的大小；请记住，我们可以查询表达式对象来查找大小，但不能查询求值器。
+
+```cpp
+namespace Eigen {
+  namespace internal {
+    template<typename ArgType>
+    struct evaluator<Circulant<ArgType> >
+      : evaluator_base<Circulant<ArgType> >
+    {
+      typedef Circulant<ArgType> XprType;
+      typedef typename nested_eval<ArgType, XprType::ColsAtCompileTime>::type ArgTypeNested;
+      typedef remove_all_t<ArgTypeNested> ArgTypeNestedCleaned;
+      typedef typename XprType::CoeffReturnType CoeffReturnType;
+ 
+      enum { 
+        CoeffReadCost = evaluator<ArgTypeNestedCleaned>::CoeffReadCost,
+        Flags = Eigen::ColMajor 
+      };
+      
+      evaluator(const XprType& xpr)
+        : m_argImpl(xpr.m_arg), m_rows(xpr.rows())
+      { }
+ 
+      CoeffReturnType coeff(Index row, Index col) const
+      {
+        Index index = row - col;
+        if (index < 0) index += m_rows;
+        return m_argImpl.coeff(index);
+      }
+ 
+      evaluator<ArgTypeNestedCleaned> m_argImpl;
+      const Index m_rows;
+    };
+  }
+}
+```
+
+
+
+### 入口
+
+```cpp
+template <class ArgType>
+Circulant<ArgType> makeCirculant(const Eigen::MatrixBase<ArgType>& arg)
+{
+  return Circulant<ArgType>(arg.derived());
+}
+```
+
+完成这些之后，`makeCirculant` 函数就非常简单了。它只是创建一个表达式对象并返回它。
+
+
+
+### 一个简单用于测试的 main 函数
+
+最后，一个简短的主函数展示了如何调用 `makeCirculant` 函数。
+
+```cpp
+int main()
+{
+    Eigen::VectorXd vec(4);
+    vec << 1, 2, 4, 8;
+    Eigen::MatrixXd mat;
+    mat = makeCirculant(vec);
+    std::cout << mat << std::endl;
+}
+```
+
+如果组合所有代码片段，则会产生以下输出，表明程序按预期工作：
+
+```cpp
+1 8 4 2
+2 1 8 4
+4 2 1 8
+8 4 2 1
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
