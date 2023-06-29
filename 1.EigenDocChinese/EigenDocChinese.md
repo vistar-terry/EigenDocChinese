@@ -7357,6 +7357,122 @@ Eigen 库包含许多断言来防止编译时和运行时的编程错误。然�
 
 ## 8.3 断言
 
+[英文原文(Assertions)](http://eigen.tuxfamily.org/dox/TopicAssertions.html)
+
+
+
+### 断言
+
+宏 `eigen_assert `默认定义为 `eigen_plain_assert`。我们使用 `eigen_plain_assert `而不是 `assert `来解决 `GCC <= 4.3` 的已知错误。基本上，`eigen_plain_assert `就是断言。
+
+
+
+#### 重新定义断言
+
+`eigen_assert`和`eigen_plain_assert`两者都定义在`Macros.h`文件中。定义`eigen_assert`间接地提供了更改其行为的机会。如果您想执行其他操作（例如抛出异常），则可以重新定义此宏，并使用`eigen_plain_assert`返回其默认行为。以下代码告诉Eigen抛出一个`std::runtime_error`异常：
+
+```cpp
+#include <stdexcept>
+#undef eigen_assert
+#define eigen_assert(x) \
+  if (!(x)) { throw (std::runtime_error("Put your message here")); }
+```
+
+
+
+#### 禁用断言
+
+断言会消耗运行时间并且可以关闭。您可以通过在包含 Eigen 标头之前定义 `EIGEN_NO_DEBUG `来抑制 `eigen_assert`。 `EIGEN_NO_DEBUG `默认情况下未定义，除非定义了 `NDEBUG`。
+
+
+
+### 静态断言
+
+静态断言直到 `C++11` 才标准化。然而，在 Eigen 库中，有很多条件可以而且应该在编译时检测到。例如，我们使用静态断言来防止下面的代码编译。
+
+```cpp
+Matrix3d()  + Matrix4d();   // adding matrices of different sizes
+Matrix4cd() * Vector3cd();  // invalid product known at compile time
+```
+
+静态断言在 `StaticAssert.h` 中定义。如果有原生的 `static_assert`，我们就使用它。否则，我们实现了一个断言宏，可以显示有限范围的消息。
+
+可以轻松地提出没有消息的静态断言，例如：
+
+```cpp
+#define STATIC_ASSERT(x) \
+  switch(0) { case 0: case x:; }
+```
+
+然而，上面的例子显然无法说明断言失败的原因。因此，我们在命名空间 `Eigen::internal` 中定义一个结构体来处理可用的消息。
+
+```cpp
+template<bool condition>
+struct static_assertion {};
+ 
+template<>
+struct static_assertion<true>
+{
+  enum {
+    YOU_TRIED_CALLING_A_VECTOR_METHOD_ON_A_MATRIX,
+    YOU_MIXED_VECTORS_OF_DIFFERENT_SIZES,
+    // see StaticAssert.h for all enums.
+  };
+};
+```
+
+然后，我们定义`EIGEN_STATIC_ASSERT(CONDITION，MSG)`以访问`Eigen::internal::static_assertion<bool(CONDITION)>::MSG`。如果条件计算为`false`，则编译器会显示许多消息，说明在`static_assert<false>`中不存在MSG。尽管如此，这不是我们感兴趣的。正如您所看到的，`static_assert<true>`的所有成员都是使用`ALL_CAPS_AND_THEY_ARE_SHOUTING`。
+
+**警告：**
+
+> 使用此宏时，MSG 应该是 `static_assertion<true>` 的成员，否则静态断言总是失败。目前，它只能在函数范围内使用。
+
+
+
+#### 派生静态断言
+
+还有其他从 `EIGEN_STATIC_ASSERT` 派生的宏来增强可读性。他们的名字是不言自明的。
+
+- **EIGEN_STATIC_ASSERT_FIXED_SIZE(TYPE)**  如果 `TYPE` 是固定大小则通过。
+- **EIGEN_STATIC_ASSERT_DYNAMIC_SIZE(TYPE)**   如果 `TYPE` 是动态大小则通过。
+- **EIGEN_STATIC_ASSERT_LVALUE(Derived)**  如果 `Derived` 是只读的，则失败。
+- **EIGEN_STATIC_ASSERT_ARRAYXPR(Derived)**   如果 `Derived` 是数组表达式，则通过。
+- **EIGEN_STATIC_ASSERT_SAME_XPR_KIND(Derived1, Derived2)**  如果两个表达式是数组和矩阵，则失败。
+
+由于 Eigen 同时处理固定大小和动态大小表达式，因此某些条件无法在编译时明确确定。我们将它们分为严格断言和宽容断言。
+
+##### 严格断言
+
+如果条件不满足，这些断言就会失败。例如，`MatrixXd `可能不是向量，因此它会失败 `EIGEN_STATIC_ASSERT_VECTOR_ONLY`。
+
+- **EIGEN_STATIC_ASSERT_VECTOR_ONLY(TYPE)**  如果 `TYPE` 必须是向量类型，则通过。
+- **EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(TYPE, SIZE)**  如果 `TYPE` 必须是给定大小的向量，则通过。
+- **EIGEN_STATIC_ASSERT_MATRIX_SPECIFIC_SIZE(TYPE, ROWS, COLS)**  如果 `TYPE` 必须是具有给定行和列的矩阵，则通过。
+
+##### 宽容断言
+
+如果无法满足条件，这些断言就会失败。例如，`MatrixXd` 和 `Matrix4d `可能具有相同的大小，因此它们传递 `EIGEN_STATIC_ASSERT_SAME_MATRIX_SIZE`。
+
+- **EIGEN_STATIC_ASSERT_SAME_VECTOR_SIZE(TYPE0,TYPE1)**  如果两个向量表达式类型必须具有不同的大小，则失败。
+- **EIGEN_STATIC_ASSERT_SAME_MATRIX_SIZE(TYPE0,TYPE1)**  如果两个矩阵表达式类型必须具有不同的大小，则失败。
+- **EIGEN_STATIC_ASSERT_SIZE_1x1(TYPE)**  如果 `TYPE` 不能是 `1x1` 表达式，则失败。
+
+有关它们抛出的消息等详细信息，请参阅 [StaticAssert.h](http://eigen.tuxfamily.org/dox/StaticAssert_8h_source.html)。
+
+
+
+#### 禁用静态断言
+
+如果定义了 `EIGEN_NO_STATIC_ASSERT`，静态断言将变成 `eigen_assert`，工作方式如下：
+
+```cpp
+#define EIGEN_STATIC_ASSERT(CONDITION,MSG) eigen_assert((CONDITION) && #MSG);
+```
+
+这节省了编译时间，但消耗了更多运行时间。默认情况下，`EIGEN_NO_STATIC_ASSERT` 未定义。
+
+
+
 ## 8.4 使 Eigen 并行运行
 
 ## 8.5 使用 Eigen 的 BLAS/LAPACK
