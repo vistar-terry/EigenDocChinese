@@ -7359,8 +7359,6 @@ Eigen 库包含许多断言来防止编译时和运行时的编程错误。然�
 
 [英文原文(Assertions)](http://eigen.tuxfamily.org/dox/TopicAssertions.html)
 
-
-
 ### 断言
 
 宏 `eigen_assert `默认定义为 `eigen_plain_assert`。我们使用 `eigen_plain_assert `而不是 `assert `来解决 `GCC <= 4.3` 的已知错误。基本上，`eigen_plain_assert `就是断言。
@@ -7473,7 +7471,81 @@ struct static_assertion<true>
 
 
 
-## 8.4 使 Eigen 并行运行
+## 8.4 Eigen 和多线程
+
+[英文原文(Eigen and multi-threading)](http://eigen.tuxfamily.org/dox/TopicMultiThreading.html)
+
+### 使 Eigen 并行运行
+
+某些 Eigen 算法可以利用硬件中存在的多个内核。为此，在编译器上启用 `OpenMP` 就足够了，例如：
+
+- GCC：`-fopenmp`
+- ICC：`-openmp`
+- MSVC：检查构建属性中的相应选项。
+
+可以使用 `OpenMP API` 或 Eigen 的 API 使用以下优先级来控制将使用的线程数：
+
+```cpp
+OMP_NUM_THREADS=n ./my_program
+omp_set_num_threads(n);
+Eigen::setNbThreads(n);
+```
+
+除非调用了 `setNbThreads`，否则 Eigen 将使用 `OpenMP` 指定的线程数。可以通过调用 `setNbThreads(0);` 来恢复此行为。可以查询将使用的线程数：
+
+```cpp
+n = Eigen::nbThreads( );
+```
+
+可以通过定义 `EIGEN_DONT_PARALLELIZE` 预处理器标记在编译时禁用 Eigen 的多线程。
+
+目前，以下算法可以利用多线程：
+
+- 一般稠密矩阵 - 矩阵乘积
+- [PartialPivLU](http://eigen.tuxfamily.org/dox/classEigen_1_1PartialPivLU.html)
+- 行主稀疏矩阵与稠密向量/矩阵的乘积
+- [ConjugateGradient](http://eigen.tuxfamily.org/dox/classEigen_1_1ConjugateGradient.html) 与 `Lower|Upper` 作为 `UpLo` 模板参数。
+- [BiCGSTAB](http://eigen.tuxfamily.org/dox/classEigen_1_1BiCGSTAB.html) 具有行主稀疏矩阵格式。
+- [LeastSquaresConjugateGradient](http://eigen.tuxfamily.org/dox/classEigen_1_1LeastSquaresConjugateGradient.html)
+
+**警告：**
+
+> 在大多数操作系统上，将线程数量限制为物理核心数量非常重要，否则预计会显着降低速度，特别是对于涉及密集矩阵的操作。
+
+确实，超线程的原理是在单个内核上以交错的方式运行多个线程（在大多数情况下为2）。然而，Eigen的矩阵乘积内核已经完全优化，并且已经利用了将近100％的CPU容量。因此，在单个核上运行多个此类线程的空间非常有限，性能会因为缓存污染和其他开销而显著下降。在阅读到这个阶段，可能会想知道为什么Eigen不仅限于物理核心的数量？这只是因为`OpenMP`不允许知道物理核心的数量，因此Eigen将启动与`OpenMP`报告的核心数一样多的线程。
+
+
+
+### 在多线程应用程序中使用 Eigen
+
+如果应用程序是多线程的，并且多个线程调用 Eigen，那么必须在创建线程之前通过调用以下例程来初始化 Eigen：
+
+```cpp
+#include <Eigen/Core>
+ 
+int main(int argc, char** argv)
+{
+  Eigen::initParallel();
+  
+  ...
+}
+```
+
+**注意：**
+
+>使用 `Eigen 3.3` 和完全兼容 `C++11` 的编译器（即线程安全的静态局部变量初始化），调用 `initParallel()` 是可选的。
+
+**警告：**
+
+> 需要注意的是，所有生成随机矩阵的函数都不是可重入的，也不是线程安全的。这些函数包括`DenseBase::Random()`和`DenseBase::setRandom()`，尽管它们调用了`Eigen::initParallel()`。这是因为这些函数是基于`std::rand`的，而`std::rand`不是可重入的。为了获得线程安全的随机生成器，我们建议使用`c++11`随机生成器或`boost::random`。
+
+如果应用程序与 `OpenMP` 并行化，可能需要禁用 Eigen 自己的并行化，如上一节所述。
+
+**警告：**
+
+> 将 `OpenMP` 与可能引发异常的自定义标量类型一起使用可能会在引发异常时导致意外行为。
+
+
 
 ## 8.5 使用 Eigen 的 BLAS/LAPACK
 
