@@ -7227,11 +7227,133 @@ void cov(const MatrixBase<Derived>& x, const MatrixBase<Derived>& y, MatrixBase<
 
 
 
-
-
-
-
 ## 8.2 预处理器指令
+
+[英文原文(Preprocessor directives)](http://eigen.tuxfamily.org/dox/TopicPreprocessorDirectives.html)
+
+你可以通过定义预处理器宏来控制Eigen的某些方面。这些宏应该在包含任何Eigen头文件之前定义。通常最好在项目选项中设置它们。
+
+本页面列出了Eigen支持的预处理器指令。
+
+
+
+### 具有重大影响的宏
+
+这些宏有主要影响并且通常会破坏API（应用程序编程接口）或ABI（应用程序二进制接口）。这可能相当危险：如果你的程序的某些部分使用一种选项编译，而其他部分（或你使用的库）使用另一种选项编译，你的程序可能无法链接或出现某些微妙的错误。尽管如此，这些选项对于知道自己在做什么的人可能是有用的。
+
+- **EIGEN2_SUPPORT** 和 **EIGEN2_SUPPORT_STAGEnn_xxx** 从 Eigen 3.3 版本开始被禁用。定义其中之一将引发编译错误。如果需要编译 Eigen2 代码，请查看[此站点](http://eigen.tuxfamily.org/index.php?title=Eigen2)。
+
+- **EIGEN_DEFAULT_DENSE_INDEX_TYPE** 是矩阵、向量和数组中的列和行索引的类型 (`DenseBase::Index`)。默认设置为 `std::ptrdiff_t`。
+
+- **EIGEN_DEFAULT_IO_FORMAT** 如果未指定 `IOFormat`，则打印矩阵时要使用该 `IOFormat`。默认为由默认构造函数` IOFormat::IOFormat()` 构造的 IOFormat。
+
+- **EIGEN_INITIALIZE_MATRICES_BY_ZERO** 如果被定义，则新构造的矩阵和数组的所有条目都将初始化为零，调整大小后矩阵和数组中的新条目也是如此。默认情况下未定义。
+
+    - **警告：**
+
+    - > `1x1`（或 `2x1` 或 `1x2`）固定大小矩阵的一元（或二进制）构造函数始终被解释为初始化构造函数，其中参数是系数值而不是大小。例如 `Vector2d v(2,1); ` 将创建一个系数为 `[2,1]` 的向量，而不是用零（即` [0,0]`）初始化的 `2x1` 向量。如果可能发生这种情况，则建议使用默认构造函数并显式调用调整大小：
+        >
+        > ```cpp
+        > Matrix<?,SizeAtCompileTime,1> v;
+        > v.resize(size);
+        > Matrix<?,RowsAtCompileTime,ColsAtCompileTime> m;
+        > m.resize(rows,cols);
+        > ```
+
+- **EIGEN_INITIALIZE_MATRICES_BY_NAN**  如果已定义，则新构造的矩阵和数组的所有条目都将初始化为`NaN`，调整大小后矩阵和数组中的新条目也将如此。这个选项特别适用于调试目的，虽然像`valgrind`这样的内存工具更为推荐。默认情况下未定义。
+
+    - 警告：
+
+    - > 有关这些宏应用于 `1x1`、`1x2` 和 `2x1` 固定大小矩阵时的限制的讨论，请参阅 `EIGEN_INITIALIZE_MATRICES_BY_ZERO` 的文档。
+
+- **EIGEN_NO_AUTOMATIC_RESIZING**  如果已定义，则赋值 `a = b` 两侧的矩阵（或数组）必须具有相同的大小；否则，Eigen 会自动调整 `a` 的大小，使其具有正确的大小。默认情况下未定义。
+
+
+
+### C++ 标准特性
+
+默认情况下，Eigen 力求根据编译器提供的信息在编译时自动检测并启用语言功能。
+
+- **EIGEN_MAX_CPP_VER** 禁用版本高于 `EIGEN_MAX_CPP_VER` 的 C++ 功能的使用。可能的值为：`14`、`17` 等。如果未定义（默认值），Eigen 将启用编译器支持的所有功能。
+
+可以通过将以下的指令分别定义为`0`或`1`来显式启用或禁用各个功能。例如，可以通过定义`EIGEN_MAX_CPP_VER=14`来将`C++`版本限制为`C++14`，但仍可以通过定义`EIGEN_HAS_C99_MATH=1`来启用`C99`数学函数。
+
+- **EIGEN_HAS_C99_MATH** 控制 `C99` 数学函数的使用，例如 `erf`、`erfc`、`lgamma `等。
+- **EIGEN_HAS_CXX11_MATH** 控制一些函数的实现，如`round`、`logp1`、`isinf`、`isnan`等。
+- **EIGEN_HAS_STD_RESULT_OF** 定义是否支持 `std::result_of`
+- **EIGEN_NO_IO** 禁用对 `<iostreams>` 的任何使用和支持。
+
+
+
+### 断言
+
+Eigen 库包含许多断言来防止编译时和运行时的编程错误。然而，这些断言确实会花费时间，因此可以被关闭。
+
+- **EIGEN_NO_DEBUG**  如果已定义，则禁用 Eigen 的断言。默认情况下未定义，除非定义了 `NDEBUG` 宏（这是禁用所有断言的标准 C++ 宏）。
+- **EIGEN_NO_STATIC_ASSERT**  如果定义了，编译时静态断言将被运行时断言替换；这节省了编译时间。默认情况下未定义。
+- **EIGEN_ASSERT**   这是一个带有一个参数的宏，用于在Eigen中进行断言。默认情况下，它基本上被定义为`assert`，如果断言被违反，则会终止程序。如果希望执行其他操作（如引发异常），请重新定义此宏。
+- **EIGEN_MPL2_ONLY**  禁用非 `MPL2` 兼容功能，或者换句话说，禁用仍在 `LGPL` 下的功能。
+
+
+
+### 对齐、矢量化和性能调整
+
+- **EIGEN_MALLOC_ALREADY_ALIGNED**  可以设置为 0 或 1 来判断默认系统 malloc 是否已返回对齐的缓冲区。如果未定义，则此信息会自动从编译器和系统预处理器标记中推导出来。
+- **EIGEN_MAX_ALIGN_BYTES** 必须是2的乘方或0。定义了Eigen可以将动态和静态分配的数据在内存边界上对齐的上限，以字节为单位。如果未定义，则会根据体系结构、编译器和操作系统自动计算默认值。通常使用此选项来强制实现使用不同SIMD选项编译的代码/库之间的二进制兼容性。例如，可以编译AVX代码并通过定义`EIGEN_MAX_ALIGN_BYTES=16`强制ABI兼容性，以与现有的SSE代码兼容。反之，由于默认情况下AVX意味着为实现最佳性能而需要32字节对齐，因此可以通过定义`EIGEN_MAX_ALIGN_BYTES=32`来编译SSE代码，以便与AVX代码实现ABI兼容性。
+- **EIGEN_MAX_STATIC_ALIGN_BYTES** 与`EIGEN_MAX_ALIGN_BYTES`类似，但仅适用于静态分配的数据。默认情况下，如果仅定义`EIGEN_MAX_ALIGN_BYTES`，则`EIGEN_MAX_STATIC_ALIGN_BYTES == EIGEN_MAX_ALIGN_BYTES`，否则根据体系结构、编译器和操作系统自动计算默认值（在不支持堆栈对齐的体系结构上可能小于`EIGEN_MAX_ALIGN_BYTES`的默认值）。让我们强调一下，`EIGEN_MAX_*_ALIGN_BYTES`只定义了一个理想的上限。实际上，数据被对齐到`EIGEN_MAX_STATIC_ALIGN_BYTES`和数据大小的最大2的幂公约数，以便不浪费内存。
+- **EIGEN_DONT_PARALLELIZE** 如果定义，这将禁用多线程。仅当启用 `OpenMP` 时，这才相关。有关详细信息，请参阅 [Eigen 和多线程](http://eigen.tuxfamily.org/dox/TopicMultiThreading.html)。
+- **EIGEN_DONT_VECTORIZE** 定义时禁用显式矢量化。默认情况下未定义，除非 Eigen 的平台测试或用户定义 `EIGEN_DONT_ALIGN `禁用对齐。
+- **EIGEN_UNALIGNED_VECTORIZE** 禁用/启用未对齐存储的矢量化。默认值为 1（启用）。如果设置为 0（禁用），则目标无法对齐的表达式不会被矢量化（例如，未对齐的小型固定大小向量或矩阵）
+- **EIGEN_FAST_MATH** 启用一些可能会影响结果准确性的优化。目前，这可以实现 sin() 和 cos() 的 SSE 矢量化，并加速 sqrt() 的单精度。默认定义为 1。将其定义为 0 以禁用。
+- **EIGEN_UNROLLING_LIMIT** 定义循环的大小以启用元循环展开。将其设置为零以禁用展开。这里的循环大小以Eigen自己的“FLOPS数”概念表示，它不对应于迭代次数或指令数。默认值为110。
+- **EIGEN_STACK_ALLOCATION_LIMIT** 定义在堆栈上分配缓冲区的最大字节数。对于内部临时缓冲区，将使用动态内存分配作为备选方案。对于固定大小的矩阵或数组，超过此阈值会引发编译时断言。使用0来设置无限制。默认值为128 KB。
+- **EIGEN_NO_CUDA**   当定义该符号时，禁用CUDA支持。在仅在主机上使用Eigen且从不从设备代码调用它的.cu文件中，这可能是有用的。
+- **EIGEN_STRONG_INLINE** 此宏用于限定我们期望编译器进行内联的关键函数和方法。默认情况下，对于MSVC和ICC编译器，它被定义为`__forceinline`，对于其他编译器，则被定义为`inline`。一个典型的用法是将其定义为`inline`，以获得更快的编译时间，尽管在某些罕见情况下会面临性能下降的风险，因为MSVC内联器无法做出良好的工作。
+- **EIGEN_DEFAULT_L1_CACHE_SIZE** 当无法在运行时确定正确的缓存大小时，设置 Eigen 的 GEBP 内核中使用的默认 L1 缓存大小。
+- **EIGEN_DEFAULT_L2_CACHE_SIZE** 当无法在运行时确定正确的缓存大小时，设置 Eigen 的 GEBP 内核中使用的默认 L2 缓存大小。
+- **EIGEN_DEFAULT_L3_CACHE_SIZE** 当无法在运行时确定正确的缓存大小时，设置 Eigen 的 GEBP 内核中使用的默认 L3 缓存大小。
+- **EIGEN_DONT_ALIGN** 已弃用，它是`EIGEN_MAX_ALIGN_BYTES=0`的同义词。它完全禁用了对齐。Eigen不会尝试对其对象进行对齐，并且不期望任何传递给它的对象都是对齐的。如果`EIGEN_UNALIGNED_VECTORIZE = 1`，则会关闭矢量化。默认情况下未定义。
+- **EIGEN_DONT_ALIGN_STATICALLY** 已弃用，它是 `EIGEN_MAX_STATIC_ALIGN_BYTES=0` 的同义词。它禁用堆栈上数组的对齐。默认情况下未定义，除非定义了 `EIGEN_DONT_ALIGN`。
+- **EIGEN_ALTIVEC_ENABLE_MMA_DYNAMIC_DISPATCH** 控制是否对 Altivec MMA 使用 Eigen 的动态调度。
+- **EIGEN_ALTIVEC_DISABLE_MMA** 覆盖 Altivec MMA 指令的使用。
+- **EIGEN_ALTIVEC_USE_CUSTOM_PACK** 控制是否使用 Eigen 的 Altivec 自定义包装。
+
+
+
+### 插件
+
+可以通过编写插件，向Eigen的许多基本类添加新的方法。如在 [扩展 MatrixBase（包括其他类）](#扩展 MatrixBase（包括其他类）) 一节中所解释的那样，插件是通过定义`EIGEN_xxx_PLUGIN`宏来指定的。支持以下宏；默认情况下没有任何宏被定义。
+
+- **EIGEN_ARRAY_PLUGIN** 用于扩展  [Array](http://eigen.tuxfamily.org/dox/classEigen_1_1Array.html) 类的插件的文件名。
+- **EIGEN_ARRAYBASE_PLUGIN**  用于扩展  [ArrayBase](http://eigen.tuxfamily.org/dox/classEigen_1_1ArrayBase.html)  类的插件的文件名。
+- **EIGEN_CWISE_PLUGIN** 用于扩展 Cwise 类的插件的文件名。
+- **EIGEN_DENSEBASE_PLUGIN** 用于扩展  [DenseBase](http://eigen.tuxfamily.org/dox/classEigen_1_1DenseBase.html)  类的插件的文件名。
+- **EIGEN_DYNAMICSPARSEMATRIX_PLUGIN**  用于扩展 DynamicSparseMatrix 类的插件的文件名。
+- **EIGEN_FUNCTORS_PLUGIN** 用于添加新函子和 functor_traits 专业化的插件的文件名。
+- **EIGEN_MAPBASE_PLUGIN**  用于扩展 MapBase 类的插件的文件名。
+- **EIGEN_MATRIX_PLUGIN**  用于扩展  [Matrix](http://eigen.tuxfamily.org/dox/classEigen_1_1Matrix.html)  类的插件的文件名。
+- **EIGEN_MATRIXBASE_PLUGIN** 用于扩展  [MatrixBase](http://eigen.tuxfamily.org/dox/classEigen_1_1MatrixBase.html) 类的插件的文件名。
+- **EIGEN_PLAINOBJECTBASE_PLUGIN**  用于扩展  [PlainObjectBase](http://eigen.tuxfamily.org/dox/classEigen_1_1PlainObjectBase.html) 类的插件的文件名。
+- **EIGEN_QUATERNION_PLUGIN** 用于扩展 [Quaternion](http://eigen.tuxfamily.org/dox/classEigen_1_1Quaternion.html) 类的插件的文件名。
+- **EIGEN_QUATERNIONBASE_PLUGIN** 用于扩展  [QuaternionBase](http://eigen.tuxfamily.org/dox/classEigen_1_1QuaternionBase.html) 类的插件的文件名。
+- **EIGEN_SPARSEMATRIX_PLUGIN** 用于扩展  [SparseMatrix](http://eigen.tuxfamily.org/dox/classEigen_1_1SparseMatrix.html) 类的插件的文件名。
+- **EIGEN_SPARSEMATRIXBASE_PLUGIN**  用于扩展 [SparseMatrixBase](http://eigen.tuxfamily.org/dox/classEigen_1_1SparseMatrixBase.html)类的插件的文件名。
+- **EIGEN_SPARSEVECTOR_PLUGIN**  用于扩展  [SparseVector](http://eigen.tuxfamily.org/dox/classEigen_1_1SparseVector.html) 类的插件的文件名。
+- **EIGEN_TRANSFORM_PLUGIN**  用于扩展  [Transform](http://eigen.tuxfamily.org/dox/classEigen_1_1Transform.html) 类的插件的文件名。
+- **EIGEN_VECTORWISEOP_PLUGIN**  用于扩展  [VectorwiseOp](http://eigen.tuxfamily.org/dox/classEigen_1_1VectorwiseOp.html) 类的插件的文件名。
+
+
+
+### Eigen 开发人员的宏
+
+这些宏主要供开发 Eigen 的人员和测试目的使用。尽管它们可能对高级用户以及出于调试和测试目的好奇的人有用，但它们不应该被实际代码使用。
+
+- **EIGEN_DEFAULT_TO_ROW_MAJOR** 定义后，矩阵的默认存储顺序将变为行优先而不是列优先。默认情况下未定义。
+- **EIGEN_INTERNAL_DEBUGGING** 如果定义，则在 Eigen 的内部例程中启用断言。这对于调试 Eigen 本身很有用。默认情况下未定义。
+- **EIGEN_NO_MALLOC** 如果定义了，任何来自 Eigen 内部从堆分配内存的请求都会导致断言失败。这对于检查某些例程是否未动态分配内存很有用。默认情况下未定义。
+- **EIGEN_RUNTIME_NO_MALLOC**  如果定义了，则会引入一个新的开关，可以通过调用 `set_is_malloc_allowed(bool) `打开和关闭该开关。如果不允许 `malloc` 并且 Eigen 尝试动态分配内存，则会导致断言失败。默认情况下未定义。
+
+
 
 ## 8.3 断言
 
