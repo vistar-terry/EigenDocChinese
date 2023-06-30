@@ -7549,7 +7549,65 @@ int main(int argc, char** argv)
 
 ## 8.5 使用 Eigen 的 BLAS/LAPACK
 
+[英文原文(Using BLAS/LAPACK from Eigen)](http://eigen.tuxfamily.org/dox/TopicUsingBlasLapack.html)
+
+自Eigen 3.3版本以及以后，任何F77兼容的BLAS或LAPACK库都可以用作稠密矩阵乘积和稠密矩阵分解的后端。例如，可以在OSX上使用Intel® MKL，Apple的Accelerate框架，OpenBLAS，Netlib LAPACK等。
+
+请务必查看此页面以进一步讨论关于使用Intel® MKL（也包括VML，PARDISO等）的具体用法。
+
+为了使用外部BLAS和LAPACK库，您必须将自己的应用程序链接到相应的库及其依赖项。对于LAPACK，还必须链接到标准的`Lapacke`库，它用作Eigen的C++代码和LAPACK F77接口之间方便的中间层。然后，必须通过定义以下一个或多个宏（在包含任何Eigen头文件之前）来激活它们的使用：
+
+**注意：**
+
+> 对于Mac用户，为了使用与`Accelerate`框架一起提供的lapack版本，您还需要`lapacke`库。使用`MacPorts`很容易实现：
+>
+> ```cpp
+> sudo port install lapack
+> ```
+>
+> 然后使用以下链接标志：`-framework Accelerate /opt/local/lib/lapack/liblapacke.dylib`
+
+| 宏                       | 描述                                                         |
+| ------------------------ | ------------------------------------------------------------ |
+| EIGEN_USE_BLAS           | 启用外部BLAS级别2和3例程的使用（与任何F77 BLAS接口兼容）。   |
+| EIGEN_USE_LAPACKE        | 启用通过`Lapacke ` C接口到`Lapack`的外部`Lapack`例程的使用（与任何F77 LAPACK接口兼容）。 |
+| EIGEN_USE_LAPACKE_STRICT | 与`EIGEN_USE_LAPACKE`相同，但数字鲁棒性较低的算法被禁用。<br>这目前仅涉及`JacobiSVD`，否则会被`gesvd`替换，后者比`Jacobi`旋转不太稳健。 |
+
+在这种情况下，Eigen的一些算法会被隐式地替换为对BLAS或LAPACK例程的调用。这些替换仅适用于使用以下四种标准标量类型之一的动态或足够大的对象：`float`、`double`、`complex<float>`和`complex<double>`。对其他标量类型的操作或混合实数和复数的操作将继续使用内置的算法。
+
+可以被替换的Eigen功能的广度如下表所示：
+
+![屏幕截图 2023-06-30 214726](img/屏幕截图 2023-06-30 214726.png)
+
+在这些例子中，`m1`和`m2`是密集矩阵，`v1`和`v2`是密集向量。
+
+
+
 ## 8.6 使用 Eigen 的英特尔® MKL
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## 8.7 在 CUDA 内核中使用 Eigen
 
