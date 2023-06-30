@@ -7634,31 +7634,72 @@ int main(int argc, char** argv)
 
 ## 8.7 在 CUDA 内核中使用 Eigen
 
+[英文原文(Using Eigen in CUDA kernels)](http://eigen.tuxfamily.org/dox/TopicCUDA.html)
 
+从`CUDA 5.5`和`Eigen 3.3`开始，可以在`CUDA`核函数内使用Eigen的矩阵、向量和数组（`fixed size`）。这在处理众多但小型问题时特别有用。默认情况下，当在由`nvcc`编译的`.cu`文件中包含Eigen头文件时，大多数Eigen的函数和方法都会被设备主机关键字前缀，使它们可从主机和设备代码中调用。这种支持可以通过在包含任何Eigen头文件之前定义`EIGEN_NO_CUDA`来禁用。这在仅在主机端使用Eigen的`.cu`文件使用时可能有用。但是，在两种情况下，主机的`SIMD`矢量化必须在`.cu`文件中禁用。因此，强烈建议将所有昂贵的主机计算从`.cu`文件恰当地移动到常规的`.cpp`文件中。
 
+已知问题：
 
+- `nvcc`和`MS Visual Studio`不兼容（欢迎提交补丁）。 
+- `nvcc 5.5`与`gcc-4.7`（或更高版本）使用标准库`<limits>`头文件有问题。为了解决这个问题，您可以在包含任何其他文件之前添加以下内容：
 
+```cpp
+// workaround issue between gcc >= 4.7 and cuda 5.5
+#if (defined __GNUC__) && (__GNUC__>4 || __GNUC_MINOR__>=7)
+  #undef _GLIBCXX_ATOMIC_BUILTINS
+  #undef _GLIBCXX_USE_INT128
+#endif
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- 在64位系统上，Eigen默认使用长整型作为索引和大小的类型。在CUDA设备上，默认使用32位整型是有意义的。但是，为了使主机和CUDA代码兼容，Eigen不能自动完成此操作。因此，用户需要在整个代码中（如果没有通过Eigen对象在主机和CUDA代码之间进行交互，则仅在CUDA代码中）定义`EIGEN_DEFAULT_DENSE_INDEX_TYPE`为`int`。
 
 
 
 ## 8.8 常见的陷阱
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## 8.9 C++中的template和typename关键字
 
