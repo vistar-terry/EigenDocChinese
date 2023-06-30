@@ -7547,7 +7547,7 @@ int main(int argc, char** argv)
 
 
 
-## 8.5 使用 Eigen 的 BLAS/LAPACK
+## 8.5 在BLAS/LAPACK使用 Eigen
 
 [英文原文(Using BLAS/LAPACK from Eigen)](http://eigen.tuxfamily.org/dox/TopicUsingBlasLapack.html)
 
@@ -7583,33 +7583,80 @@ int main(int argc, char** argv)
 
 
 
-## 8.6 使用 Eigen 的英特尔® MKL
+## 8.6 在英特尔® MKL使用 Eigen
 
+[英文原文(Using Intel® MKL from Eigen)](http://eigen.tuxfamily.org/dox/TopicUsingIntelMKL.html)
 
+自Eigen 3.1版本及以后，用户可以使用`Intel®Math Kernel Library（MKL）`如果安装了`Intel MKL 10.3`（或更高版本）。
 
+[Intel MKL ](http://eigen.tuxfamily.org/Counter/redirect_to_mkl.php) 提供了针对x86兼容架构高度优化的多线程数学例程。`Intel MKL`可在`Linux`、`Mac`和`Windows`上使用，适用于`Intel64`和`IA32`架构。
 
+**注意：**
 
+> Intel® MKL是专有软件，用户需要购买或注册社区（免费）Intel MKL许可证来使用它。此外，用户产品的许可证必须允许链接到专有软件，但不包括任何未经修改的GPL版本。
 
+通过Eigen使用Intel MKL很容易：
 
+1. 在包含任何Eigen的头文件之前定义`EIGEN_USE_MKL_ALL`宏。
+2. 将你的程序链接到MKL库（请参阅[MKL链接指南](http://software.intel.com/en-us/articles/intel-mkl-link-line-advisor/)）。
+3. 在64位系统上，你必须使用LP64接口（而不是ILP64接口）。
 
+在这样做时，一些Eigen的算法会被替换为调用Intel MKL例程，而这种替换仅适用于具有以下四种标准标量类型之一的动态或足够大的对象：`float`，`double`，`complex<float>`和`complex<double>`。使用其他标量类型或混合实数和复数的操作仍将使用内置的算法。
 
+此外，您可以选择定义以下一个或多个宏来决定哪些部分将被替换：
 
+| 宏                       | 描述                                                         |
+| ------------------------ | ------------------------------------------------------------ |
+| EIGEN_USE_BLAS           | 启用使用外部BLAS `Level 2`和`Level 3`例程。                  |
+| EIGEN_USE_LAPACKE        | 启用使用Lapacke C接口到Lapack的外部Lapack例程。              |
+| EIGEN_USE_LAPACKE_STRICT | 与`EIGEN_USE_LAPACKE`相同，但将禁用鲁棒性较低的算法。这仅涉及到`JacobiSVD`，否则将被`gesvd`替换，后者比`Jacobi`旋转算法鲁棒性更低。 |
+| EIGEN_USE_MKL_VML        | 启用Intel VML（向量操作）的使用。                            |
+| EIGEN_USE_MKL_ALL        | 定义了`EIGEN_USE_BLAS`、`EIGEN_USE_LAPACKE`和`EIGEN_USE_MKL_VML`。 |
 
+`EIGEN_USE_BLAS`和`EIGEN_USE_LAPACKE*`宏可以与`EIGEN_USE_MKL`结合使用，以显式告诉Eigen底层的`BLAS/Lapack`实现是`Intel MKL`。主要效果是启用`MKL`直接调用功能（`MKL_DIRECT_CALL`）。这可能有助于提高某些`MKL BLAS`（`?GEMM`、`?GEMV`、`?TRSM`、`?AXPY`和`?DOT`）和`LAPACK`（`LU`、`Cholesky`和`QR`）例程对非常小的矩阵的性能。可以通过定义`EIGEN_MKL_NO_DIRECT_CALL`来禁用`MKL`直接调用。
 
+请注意，`BLAS`和`LAPACKE`后端可用于任何F77兼容的`BLAS`和`LAPACK`库。有关详细信息，请参见 [此页面](http://eigen.tuxfamily.org/dox/TopicUsingBlasLapack.html)。
 
+最后，`Intel MKL`附带的`PARDISO`稀疏求解器可以通过`PardisoSupport`模块的`PardisoLU`、`PardisoLLT`和`PardisoLDLT`类来使用。
 
+下表总结了`EIGEN_USE_MKL_VML`覆盖的函数列表：
 
+![屏幕截图 2023-06-30 224317](img/屏幕截图 2023-06-30 224317.png)
 
+在这些例子中，`v1`和`v2`是密集的向量。
 
+### 链接
 
-
-
-
-
+- Intel MKL可以在[这里](http://eigen.tuxfamily.org/Counter/redirect_to_mkl.php)购买和下载。
+- Intel MKL还捆绑在[Intel Composer XE](http://software.intel.com/en-us/articles/intel-composer-xe/)中。
 
 
 
 ## 8.7 在 CUDA 内核中使用 Eigen
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## 8.8 常见的陷阱
 
