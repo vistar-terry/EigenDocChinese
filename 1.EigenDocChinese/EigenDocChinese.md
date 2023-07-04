@@ -7657,31 +7657,147 @@ int main(int argc, char** argv)
 
 ## 8.8 常见的陷阱
 
+[英文原文(Common pitfalls)](http://eigen.tuxfamily.org/dox/TopicPitfalls.html)
+
+### 针对模板方法的编译错误
+
+详见[下一节](#8.9 C++中的template和typename关键字)
 
 
 
+### 混叠
+
+详见[3.11节](#3.11 混叠)
 
 
 
+### 对齐问题（运行时断言）
+
+Eigen进行了显式向量化，虽然这受到许多用户的赞赏，但在某些特殊情况下，数据对齐会出现问题。实际上，在`C++17`之前，C++没有足够好的支持显式数据对齐。在这种情况下，程序会出现断言失败（即“受控崩溃”），并显示一条消息，引导你参考[此页面](http://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html)。它包含有关如何处理该问题的每个已知原因的详细信息。
+
+如果你不关心矢量化并且不想处理这些对齐问题，可以阅读[如何避免这一情况](http://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html#getrid)。
 
 
 
+### C++11 和 auto 关键字
+
+简而言之：不要将 `auto` 关键字与 Eigen 表达式一起使用，除非你 100% 确定自己在做什么。特别是，不要使用 `auto` 关键字来替代 `Matrix<>` 类型。这是一个例子：
+
+```cpp
+MatrixXd A, B;
+auto C = A*B;
+for(...) { ... w = C * v;  ...}
+```
+
+在这个例子中，`C` 的类型不是`MatrixXd`，而是表示矩阵乘积并存储对 `A` 和 `B` 的引用的抽象表达式。因此，`A*B` 的乘积将在 `for` 循环的每次迭代中执行多次。此外，如果 `A` 或 `B` 的系数在迭代过程中发生改变，那么 `C` 将评估为不同的值，就像以下示例一样：
+
+```cpp
+MatrixXd A = ..., B = ...;
+auto C = A*B;
+MatrixXd R1 = C;
+A = ...;
+MatrixXd R2 = C;
+```
+
+因此我们最终得到 `R1` ≠ `R2`。
+
+如下是导致段错误的另一个示例：
+
+```cpp
+auto C = ((A+B).eval()).transpose();
+// do something with C
+```
+
+问题在于 `eval()` 返回一个临时对象（在本例中为`MatrixXd`），然后由`Transpose<>`表达式引用。然而，这个临时对象在第一行之后立即被删除，然后`C`表达式引用了一个已经不存在的对象。一个可能的解决方法是在整个表达式上应用`eval()`：
+
+```cpp
+auto C = (A+B).transpose().eval();
+```
+
+当 Eigen 自动计算子表达式时，可能会出现相同的问题，如下例所示：
+
+```cpp
+VectorXd u, v;
+auto C = u + (A*v).normalized();
+// do something with C
+```
+
+这里，`normalized()` 方法必须评估耗费资源的乘积 `A*v` 以避免评估两次。同样，一种可能的修复方法是对整个表达式调用 `.eval()`：
+
+```cpp
+auto C = (u + (A*v).normalized()).eval();
+```
+
+在本例中，`C` 将是常规 `VectorXd` 对象。请注意，当底层表达式已经是普通 `Matrix<>` 时，`DenseBase::eval()` 足够智能，可以避免复制。
 
 
 
+### 头文件问题（编译失败）
+
+对于所有的库，都必须查看文档以确定要包含哪个头文件。Eigen也是如此，但略有不同的是：对于Eigen而言，一个类中的方法可能需要比类本身更多的`# include`。例如，如果你想在向量上使用 `cross()` 方法（它计算叉积），你需要：
+
+```cpp
+#include<Eigen/Geometry>
+```
 
 
 
+### 三元运算符
+
+简而言之：避免将三元运算符 (`COND ? THEN : ELSE`) 与 Eigen 的 `THEN` 和 `ELSE` 语句表达式一起使用。要了解原因，让我们考虑以下示例：
+
+```cpp
+Vector3f A;
+A << 1, 2, 3;
+Vector3f B = ((1 < 0) ? (A.reverse()) : A);
+```
+
+这个例子将返回`B = 3, 2, 1`。原因是在c++中，`ELSE`语句的类型根据`THEN`表达式的类型推断，以使两者的类型匹配。由于`THEN`是一个`Reverse<Vector3f>`，因此`ELSE`语句`A`被转换为一个`Reverse<Vector3f>`，因此编译器生成：
+
+```cpp
+Vector3f B = ((1 < 0) ? (A.reverse()) : Reverse<Vector3f>(A));
+```
+
+在这种非常特殊的情况下，解决方法是为 `THEN` 语句调用 `A.reverse().eval()`，但最安全、最快的方法实际上是避免使用 Eigen 表达式的三元运算符并使用 `if/else` 构造。
 
 
 
+### 按值传递
+
+如果不知道为什么 Eigen 的值传递是错误的，请先阅读[此页](http://eigen.tuxfamily.org/dox/group__TopicPassingByValue.html)。
+
+虽然可能非常小心并确保所有显式使用 Eigen 类型的代码都是按引用传递的，但必须注意在编译时定义参数类型的模板。
+
+如果一个模板有一个以按值方式传递参数的函数，并且相关的模板参数最终成为Eigen类型，那么你当然会遇到与明确定义函数以引用方式传递Eigen类型相同的对齐问题。
+
+使用Eigen类型与其他第三方库或甚至`STL`一起使用可能会遇到同样的问题。例如，`boost::bind` 使用按值传递来存储返回的函数对象中的参数。
+
+至少有两种方法可以解决这个问题：
+
+- 如果你传递的值保证在函数对象的生命周期内存在，你可以使用`boost::ref()`将其包装，然后传递给`boost::bind`。通常，对于栈上的值，这不是一个解决方案，因为如果该函数对象传递到更低的作用域或独立作用域，该对象可能已经被删除，因此在尝试使用它时会出现问题。
+- 另一种选择是让函数采用引用计数指针（如 `boost::shared_ptr`）作为参数。这避免了需要管理所传递对象的生命周期。
 
 
 
+### 具有布尔系数的矩阵
 
+目前使用具有布尔系数的 `Matrix` 的行为不一致，并且可能在 Eigen 的未来版本中发生变化，因此请谨慎使用！
 
+这种不一致的一个简单例子是：
 
+```cpp
+template<int Size>
+void foo() {
+    Eigen::Matrix<bool, Size, Size> A, B, C;
+    A.setOnes();
+    B.setOnes();
 
+    C = A * B - A * B;
+    std::cout << C << "\n";
+}
+```
+
+因为调用 `foo<3>()` 会打印零矩阵，而调用 `foo<10>()` 会打印单位矩阵。
 
 
 
