@@ -7801,23 +7801,226 @@ void foo() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## 8.9 C++中的template和typename关键字
+
+[英文原文(The template and typename keywords in C++)](http://eigen.tuxfamily.org/dox/TopicTemplateKeyword.html)
+
+在C++中，`template`和`typename`关键字有两种用途。其中一个在程序员中相当有知名度：用于定义模板。另一个用法则更为隐晦：用于指定一个表达式是引用模板函数还是类型。这经常困扰使用Eigen库的程序员，通常会导致编译器难以理解的错误信息，比如 `expected expression` 或 `no match for operator<>`。
+
+
+
+### 使用 template 和 typename 关键字定义模板
+
+`template`和`typename`关键字通常用于定义模板。本页面不涉及这个主题，我们假设读者已经了解了这一点（否则请参考C++书籍）。以下示例应该说明了`template`关键字的用法。
+
+```cpp
+template <typename T>
+bool isPositive(T x)
+{
+    return x > 0;
+}
+```
+
+我们也可以编写 `template <class T>;` 关键字 `typename` 和 `class` 在此上下文中具有相同的含义。
+
+
+
+### 显示 template 关键字的第二次使用的示例
+
+让我们通过一个例子来说明template关键字的第二种用法。假设我们想编写一个函数，将矩阵的上三角部分的所有元素复制到另一个矩阵中，同时保持下三角不变。一个简单的实现如下：
+
+```cpp
+#include <Eigen/Dense>
+#include <iostream>
+ 
+using Eigen::MatrixXf;
+ 
+void copyUpperTriangularPart(MatrixXf& dst, const MatrixXf& src)
+{
+    dst.triangularView<Eigen::Upper>() = src.triangularView<Eigen::Upper>();
+}
+ 
+int main()
+{
+    MatrixXf m1 = MatrixXf::Ones(4,4);
+    MatrixXf m2 = MatrixXf::Random(4,4);
+    std::cout << "m2 before copy:" << std::endl;
+    std::cout << m2 << std::endl << std::endl;
+    copyUpperTriangularPart(m2, m1);
+    std::cout << "m2 after copy:" << std::endl;
+    std::cout << m2 << std::endl << std::endl;
+}
+```
+
+输出为：
+
+```cpp
+m2 before copy:
+   0.68   0.823  -0.444   -0.27
+ -0.211  -0.605   0.108  0.0268
+  0.566   -0.33 -0.0452   0.904
+  0.597   0.536   0.258   0.832
+
+m2 after copy:
+     1      1      1      1
+-0.211      1      1      1
+ 0.566  -0.33      1      1
+ 0.597  0.536  0.258      1
+```
+
+这个实现虽然可以工作，但它缺乏灵活性。首先，它只适用于单精度浮点数的动态大小矩阵；函数`copyUpperTriangularPart()` 不接受静态大小矩阵或双精度数字的矩阵。其次，如果你使用`mat.topLeftCorner(3,3)` 这样的表达式作为 `src` 参数，那么这将被复制到 `MatrixXf` 类型的临时变量中；这个复制是可以避免的。
+
+正如编写以特征类型作为参数的函数中所解释的，这两个问题都可以通过使 `copyUpperTrianglePart()` 接受任何 `MatrixBase` 类型的对象来解决。这导致以下代码：
+
+```cpp
+#include <Eigen/Dense>
+#include <iostream>
+ 
+template <typename Derived1, typename Derived2>
+void copyUpperTriangularPart(Eigen::MatrixBase<Derived1>& dst, const Eigen::MatrixBase<Derived2>& src)
+{
+  /* Note the 'template' keywords in the following line! */
+  dst.template triangularView<Eigen::Upper>() = src.template triangularView<Eigen::Upper>();
+}
+ 
+int main()
+{
+  Eigen::MatrixXi m1 = Eigen::MatrixXi::Ones(5,5);
+  Eigen::MatrixXi m2 = Eigen::MatrixXi::Random(4,4);
+  std::cout << "m2 before copy:" << std::endl;
+  std::cout << m2 << std::endl << std::endl;
+  copyUpperTriangularPart(m2, m1.topLeftCorner(4,4));
+  std::cout << "m2 after copy:" << std::endl;
+  std::cout << m2 << std::endl << std::endl;
+}
+```
+
+输出为：
+
+```cpp
+m2 before copy:
+ 7  9 -5 -3
+-2 -6  1  0
+ 6 -3  0  9
+ 6  6  3  9
+
+m2 after copy:
+ 1  1  1  1
+-2  1  1  1
+ 6 -3  1  1
+ 6  6  3  1
+```
+
+`copyUpperTriangularPart()` 函数体中的一行代码展示了C++中更为隐晦的第二种使用方式。尽管它可能看起来很奇怪，但是根据标准，使用`template`关键字是必要的。如果不使用它，编译器可能会拒绝代码并显示类似于 `no match for operator<` 的错误信息。
+
+
+
+### 解释
+
+在上个例子中，需要使用`template`关键字的原因与C++中模板的编译规则有关。编译器必须在定义模板的位置检查代码的语法正确性，而不知道模板实参(`Derived1`和`Derived2`在本例中)的实际值。这意味着编译器不知道`dst.triangularView`是一个成员模板，并且后面的 `<` 符号是模板参数的分隔符的一部分。另一个可能性是`dst.triangularView`是一个成员变量，`<` 符号引用 `operator<()` 函数。实际上，根据标准，编译器应该选择第二种可能性。如果`dst.triangularView`是一个成员模板(如我们的情况)，程序员应该使用`template`关键字显式地指定，并写成`dst.template triangularView`。
+
+确切的规则相当复杂，但忽略一些微妙之处，我们可以将其总结如下：
+
+- 从属名称是（直接或间接）依赖于模板参数的名称。在示例中，`dst` 是从属名称，因为它的类型为 `MatrixBase<Derived1>`，该类型取决于模板参数 `Derived1`。
+- 如果代码包含 `xxx.yyy` 或 `xxx->yyy` 构造之一，并且 `xxx` 是从属名称，并且 `yyy` 引用成员模板，则必须在 `yyy` 之前使用 `template` 关键字，从而导致 `xxx.template yyy` 或 `xxx- > template yyy`。
+- 如果代码包含构造 `xxx::yyy` 并且 `xxx` 是从属名称，并且 `yyy` 引用成员 `typedef`，则必须在整个构造之前使用 `typename` 关键字，从而生成类型名 `xxx::yyy`。
+
+作为需要 `typename` 关键字的示例，请考虑稀疏矩阵操作中的以下代码，用于迭代稀疏矩阵类型的非零系数：
+
+```cpp
+SparseMatrixType mat(rows,cols);
+for (int k=0; k<mat.outerSize(); ++k)
+    for (SparseMatrixType::InnerIterator it(mat,k); it; ++it)
+    {
+    	/* ... */
+    }
+```
+
+如果 `SparseMatrixType` 依赖于模板参数，则需要 `typename` 关键字：
+
+```cpp
+template <typename T>
+void iterateOverSparseMatrix(const SparseMatrix<T>& mat;
+{
+    for (int k=0; k<m1.outerSize(); ++k)
+        for (typename SparseMatrix<T>::InnerIterator it(mat,k); it; ++it)
+        {
+        	/* ... */
+        }
+}
+```
+
+
+
+### 进一步阅读的资源
+
+有关本主题的更多信息和更全面的解释，读者可以查阅以下资源：
+
+- `David Abrahams` 和 `Aleksey Gurtovoy` 所著的《C++ Template Metaprogramming》一书在附录 B（“类型名和模板关键字”）中有非常好的解释。
+- http://pages.cs.wisc.edu/~driscoll/typename.html
+- http://www.parashift.com/c++-faq-lite/templates.html#faq-35.18
+- http://www.comeaucomputing.com/techtalk/templates/#templateprefix
+- http://www.comeaucomputing.com/techtalk/templates/#typename
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## 8.10 深入了解 Eigen
 
