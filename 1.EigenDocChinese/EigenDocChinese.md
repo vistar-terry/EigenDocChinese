@@ -7964,67 +7964,158 @@ void iterateOverSparseMatrix(const SparseMatrix<T>& mat;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## 8.10 深入了解 Eigen
 
 ### 8.10.1 Eigen 内部发生了什么
+
+[英文原文(What happens inside Eigen, on a simple example)](http://eigen.tuxfamily.org/dox/TopicInsideEigenExample.html)
+
+考虑以下示例程序：
+
+```cpp
+#include<Eigen/Core>
+ 
+int main()
+{
+    int size = 50;
+    // VectorXf is a vector of floats, with dynamic size.
+    Eigen::VectorXf u(size), v(size), w(size);
+    u = v + w;
+}
+```
+
+本页的目标是了解 Eigen 如何编译它，假设启用了 `SSE2` 矢量化（GCC 选项 `-msse2`）。
+
+
+
+#### 为什么讨论这个问题
+
+也许你认为上面的示例程序很简单，编译它应该不涉及任何非常有趣的事情。在开始之前，让我们解释一下编译它时的一些不普通的部分——也就是生成优化代码——以便我们在这里解释Eigen的复杂性真正有用。
+
+看一下这行代码：
+
+```cpp
+u = v + w;   //   (*)
+```
+
+编译它的第一件重要的事情是数组应该只遍历一次，就像：
+
+```cpp
+for(int i = 0; i < size; i++) u[i] = v[i] + w[i];
+```
+
+问题是，如果我们创建一个简单的 C++ 库，其中 `VectorXf` 类有一个返回 `VectorXf` 的运算符`+`，那么代码行 `(*)` 将相当于：
+
+```cpp
+VectorXf tmp = v + w;
+VectorXf u = tmp;
+```
+
+显然，这里引入临时`tmp`是没有用的。它对性能有非常糟糕的影响，首先是因为 `tmp` 的创建需要在此上下文中进行动态内存分配，其次是因为现在有两个 `for` 循环：
+
+```cpp
+for(int i = 0; i < size; i++) tmp[i] = v[i] + w[i];
+for(int i = 0; i < size; i++) u[i] = tmp[i];
+```
+
+如果我们需要进行两次数组遍历而不是一次，这对性能来说非常糟糕，因为这意味着我们需要做很多冗余的内存访问。
+
+编译上述程序的第二个重要方面是正确使用`SSE2`指令。请注意，Eigen还支持`AltiVec`，我们在这里讨论的所有内容也适用于`AltiVec`。
+
+像`AltiVec`一样，`SSE2`是一组指令，允许一次处理128位数据。由于`float`占32位，这意味着`SSE2`指令可以一次处理4个`float`。这意味着，如果正确使用，它们可以使我们的计算速度提高4倍。
+
+然而，在上面的程序中，我们选择了`size=50`，因此我们的向量由50个`float`组成，而50不是4的倍数。这意味着我们不能指望使用`SSE2`指令来执行所有的计算。我们应该着眼于次优解，即使用`SSE2`指令处理前48个系数，因为48是小于50的最大4的倍数，然后单独处理第49个和第50个系数。类似这样：
+
+```cpp
+for(int i = 0; i < 4*(size/4); i+=4) u.packet(i)  = v.packet(i) + w.packet(i);
+for(int i = 4*(size/4); i < size; i++) u[i] = v[i] + w[i];
+```
+
+因此，让我们逐行查看示例程序，然后跟随 Eigen 进行编译。
+
+
+
+#### 构建向量
+
+我们分析一下第一行代码：
+
+```cpp
+Eigen::VectorXf u(size), v(size), w(size);
+```
+
+首先，`VectorXf` 是 `typedef` 定义类型：
+
+```cpp
+typedef Matrix<float, Dynamic, 1> VectorXf;
+```
+
+类模板`Matrix`在`src/Core/util/ForwardDeclarations.h`中声明，有6个模板参数，但最后3个参数由前3个自动确定，所以暂时不解释它们。在这里，`Matrix<float，Dynamic，1>`表示一个浮点数矩阵，具有1列和动态的行数。
+
+`Matrix` 类继承了基类 `MatrixBase`。可以说 `MatrixBase` 统一了矩阵/向量和所有表达式类型，下面将详细介绍。
+
+当只执行 `Eigen::VectorXf u(size);` 时，调用的构造函数是 `Matrix::Matrix(int)`，位于  [src/Core/Matrix.h](http://eigen.tuxfamily.org/dox/Matrix_8h_source.html)  中。除了一些断言之外，它所做的只是构造 `m_storage` 成员，其类型为 `DenseStorage<float, Dynamic, Dynamic, 1>`。
+
+你可能会想，把存储放在一个单独的类中是不是设计过度了？原因是Matrix类模板涵盖了各种矩阵和向量：固定大小和动态大小。这两种情况下的存储方法不同。对于固定大小的矩阵，矩阵系数被存储为一个普通的成员数组。对于动态大小的矩阵，系数将被存储为指向动态分配数组的指针。因此，需要将存储从Matrix类中抽象出来。这就是`DenseStorage`的作用。
+
+让我们看看在  [src/Core/DenseStorage.h](http://eigen.tuxfamily.org/dox/DenseStorage_8h_source.html) 中的这个构造函数。这里有许多`DenseStorages`的部分模板特化，单独处理维度为`Dynamic`或在编译时固定的情况。我们要看的部分特化是：
+
+```cpp
+template<typename T, int Cols_> class DenseStorage<T, Dynamic, Dynamic, Cols_>
+```
+
+这里，调用的构造函数是 `DenseStorage::DenseStorage(int size, int rows, int columns)`，其中 `size=50`、`rows=50`、`columns=1`。
+
+这个构造函数如下：
+
+```cpp
+inline DenseStorage(int size, int rows, int) : m_data(internal::aligned_new<T>(size)), m_rows(rows) {}
+```
+
+这里，`m_data`成员是矩阵系数的实际数组，它是动态分配的。与其调用`new[]`或`malloc()`，Eigen 定义了自己的`internal::aligned_new`，它位于 [src/Core/util/Memory.h](http://eigen.tuxfamily.org/dox/Memory_8h_source.html)中。它的作用是，如果启用了向量化，那么它会使用平台特定的调用来分配一个128位对齐的数组，因为对于使用`SSE2`和`AltiVec`进行向量化非常有用。如果未启用向量化，则相当于标准的`new[]`。
+
+构造函数还将`m_rows`成员设置为`size`。请注意，这里没有`m_columns`成员：实际上，在`DenseStorage`的这个部分特化中，列数是编译时确定的，因为`Cols_`模板参数与`Dynamic`不同。在这种情况下，`Cols_`为`1`，这意味着我们的向量只是一个只有`1`列的矩阵。因此，没有必要将列数存储为运行时变量。
+
+当调用`VectorXf::data()`获取系数数组的指针时，它会返回`DenseStorage::data()`，后者返回`m_data`成员。
+
+当调用`VectorXf::size()`获取向量的大小时，实际上是调用了基类`MatrixBase`中的一个方法。它确定向量是一个列向量，因为`ColsAtCompileTime==1`（这来自于`typedef VectorXf`中的模板参数）。它推断出大小就是行数，所以返回`VectorXf::rows()`，后者返回`DenseStorage::rows()`，后者返回构造函数设置的`m_rows`成员。
+
+
+
+#### 求和表达式的构造
+
+现在我们的向量已经构建完毕，让我们继续下一行：
+
+```cpp
+u = v + w;
+```
+
+操作符 `+` 返回一个“向量之和”表达式，但实际上此时并不执行计算。执行计算的是运算符`=`（其调用随后发生）。
+
+现在让我们看看 Eigen 这时做了什么：
+
+```cpp
+v + w
+```
+
+这里，`v` 和 `w` 的类型为 `VectorXf`，它是 `typedef` 定义的`Matrix`，`Matrix` 是 `MatrixBase` 的子类。所以被称为：`MatrixBase::operator+(const MatrixBase&)`
+
+该运算符的返回类型是：`CwiseBinaryOp<internal::scalar_sum_op<float>, VectorXf, VectorXf>`
+
+`CwiseBinaryOp`类是我们第一次接触到表达式模板。如前所述，操作符`+`本身并不执行任何计算，它只返回一个抽象的“向量和”表达式。由于还有“向量差”和“系数逐个乘积”的表达式，因此我们将它们统一为“系数逐个二元操作”，缩写为`CwiseBinaryOp`。 “系数逐个”表示按系数进行操作。 “二元”的意思是有两个操作数。
+
+对于
+
+```cpp
+v + w + u;
+```
+
+第一个`v + w`将返回如上所述的`CwiseBinaryOp`，因此为了使其编译，需要在`CwiseBinaryOp`类中定义一个操作符 `+` ，但是，难道要在每个表达式类中定义所有运算符吗，当然不可能，解决方案是`CwiseBinaryOp`本身，以及`Matrix`和所有其他表达式类型，都是`MatrixBase`的子类。因此，只需在`MatrixBase`类中定义所有运算符即可。由于`MatrixBase`是不同子类的共同基类，因此依赖于子类的方面必须从`MatrixBase`中抽象出来。这被称为多态性。
+
+
+
+
+
+
 
 ### 8.10.2 类层次结构
 
