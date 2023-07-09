@@ -8111,6 +8111,117 @@ v + w + u;
 
 第一个`v + w`将返回如上所述的`CwiseBinaryOp`，因此为了使其编译，需要在`CwiseBinaryOp`类中定义一个操作符 `+` ，但是，难道要在每个表达式类中定义所有运算符吗，当然不可能，解决方案是`CwiseBinaryOp`本身，以及`Matrix`和所有其他表达式类型，都是`MatrixBase`的子类。因此，只需在`MatrixBase`类中定义所有运算符即可。由于`MatrixBase`是不同子类的共同基类，因此依赖于子类的方面必须从`MatrixBase`中抽象出来。这被称为多态性。
 
+在C ++中，多态的经典方法是通过虚函数来实现的。这是动态多态性。在这里，不使用动态多态性，因为Eigen的整个设计都基于这样一个假设：所有复杂性、所有抽象都在编译时解决。这是至关重要的：如果抽象无法在编译时解决，Eigen的编译时优化机制就会变得无用，更不用说如果该抽象必须在运行时解决，那么它本身就会产生开销。
+
+在这里，想要的是将单个`MatrixBase`类作为许多子类的基类，以这样的方式，使得每个`MatrixBase`对象（无论是矩阵、向量还是任何类型的表达式）在编译时（而不是运行时）知道它是哪个特定的子类对象（即它是矩阵、表达式，以及是什么类型的表达式）。
+
+解决方案是递归模板模式（[Curiously Recurring Template Pattern](http://en.wikipedia.org/wiki/Curiously_Recurring_Template_Pattern)）。
+
+简而言之，`MatrixBase`采用模板参数`Derived`。每定义一个子类子类（`Subclass`），我们实际上是让`Subclass`继承`MatrixBase<Subclass>`。关键在于不同的子类继承不同类型的`MatrixBase`。由于这个原因，每当我们有一个子类的对象，并调用它的一些`MatrixBase`方法时，即使在 `MatrixBase` 方法内部，我们仍然记得我们正在讨论哪个特定子类。
+
+这意味着我们可以将几乎所有的方法和运算符放在基类`MatrixBase`中，并在子类中只保留最少的方法。如果你看一下Eigen中的子类，比如`CwiseBinaryOp`类，它们只有很少的方法。有`coeff()`和有时返回系数的coeffRef()方法，有返回行数和列数的`rows()`和`cols()`方法，但并没有更多的方法。所有的基础方法都在`MatrixBase`中，因此它只需要为所有类型的表达式、矩阵和向量编写一次即可。
+
+那么，让我们结束这个题外话，回到我们当前正在分析的示例程序中的代码片段：
+
+```cpp
+v + w
+```
+
+现在我们对 `MatrixBase` 已经很熟悉了，让我们完整地编写此处调用的运算符`+`的原型（此代码来自 [src/Core/MatrixBase.h](http://eigen.tuxfamily.org/dox/MatrixBase_8h_source.html)）：
+
+```cpp
+template<typename Derived>
+class MatrixBase
+{
+    // ...
+
+    template<typename OtherDerived>
+    const CwiseBinaryOp<internal::scalar_sum_op<typename internal::traits<Derived>::Scalar>, Derived, OtherDerived>
+    operator+(const MatrixBase<OtherDerived> &other) const;
+
+    // ...
+};
+```
+
+这里的`Derived`和`OtherDerived`都是`VectorXf`。
+
+正如我们所说，`CwiseBinaryOp`也用于其他操作，例如减法，因此它需要另一个模板参数来确定将应用于系数的操作。这个模板参数是一个函数对象（`functor`），也就是说，它是一个具有`operator()`的类，因此它的行为类似于函数。在这里，使用的函数对象是`internal::scalar_sum_op`。它定义在`src/Core/Functors.h`中。
+
+现在让我们解释一下`internal::traits`。`internal::scalar_sum_op`类需要一个模板参数：要处理的数字类型。当然，在这里我们想传递`VectorXf`的标量类型（即数字类型），它是`float`。我们如何确定`Derived`的标量类型呢？在整个Eigen中，所有的矩阵和表达式类型都定义了一个`typedef Scalar`，它给出了它的标量类型。例如，`VectorXf::Scalar`是`float`的`typedef`。因此，在这里，如果一切都很简单，我们可以找到`Derived`的数字类型，如下所示：
+
+```cpp
+typename Derived::Scalar
+```
+
+不幸的是，在这里我们无法这样做，因为编译器会报错，类型`Derived`还没有定义。因此，我们使用一个变通办法：在`src/Core/util/ForwardDeclarations.h`中，我们声明（而不是定义！）了所有的子类，比如`Matrix`，还声明了以下类模板：
+
+```cpp
+template<typename T> struct internal::traits;
+```
+
+在[src/Core/Matrix.h](http://eigen.tuxfamily.org/dox/Matrix_8h_source.html)中，在定义类`Matrix`之前，我们为`T=Matrix<任意模板参数>`定义了`internal::traits`的部分特化。在这个特化版本中，我们定义了`Scalar typedef`。因此，当我们实际定义`Matrix`时，使用 `typename internal::traits<Matrix>::Scalar` 这样的语句是合法的。
+
+无论如何，我们已经声明了我们的操作符 `+`。在我们的情况下，`Derived`和`OtherDerived`都是`VectorXf`，因此上述声明相当于：
+
+```cpp
+class MatrixBase<VectorXf>
+{
+    // ...
+
+    const CwiseBinaryOp<internal::scalar_sum_op<float>, VectorXf, VectorXf>
+    operator+(const MatrixBase<VectorXf> &other) const;
+
+    // ...
+};
+```
+
+让我们现在跳到`src/Core/CwiseBinaryOp.h`来看它是如何定义的。它所做的就是返回一个`CwiseBinaryOp`对象，而这个对象只是存储了对左侧和右侧表达式的引用，`CwiseBinaryOp`对象也存储了一个（空）函数对象的实例，这里不必在意，因为这只是一个次要的实现细节。
+
+因此，操作符`+`没有执行任何实际的计算。总之，操作`v + w`只是返回了一个`CwiseBinaryOp`类型的对象，它仅仅是存储了对`v`和`w`的引用而已。
+
+
+
+#### 分配
+
+至此，表达式 `v + w` 已完成求值，接下来，在编译该行代码的过程中，输入运算符 `=`：
+
+```cpp
+u = v + w;
+```
+
+这里调用了运算符 `=`，向量 `u` 是 `VectorXf `类的对象，即 `Matrix`。 [src/Core/Matrix.h](http://eigen.tuxfamily.org/dox/Matrix_8h_source.html) 中，在 `Matrix` 类的定义中，我们看到：
+
+```cpp
+template<typename OtherDerived>
+inline Matrix& operator=(const MatrixBase<OtherDerived>& other)
+{
+    eigen_assert(m_storage.data()!=0 && "you cannot use operator= with a non initialized matrix (instead use set()");
+    return Base::operator=(other.derived());
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
