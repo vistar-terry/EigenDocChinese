@@ -8200,6 +8200,165 @@ inline Matrix& operator=(const MatrixBase<OtherDerived>& other)
 }
 ```
 
+这里，`Base` 是 `MatrixBase<Matrix>` 的 `typedef` 类型。所以，所谓的 `Base::operator=` 就是 `MatrixBase<Matrix>::operator=` 。它的原型在 [src/Core/MatrixBase.h](http://eigen.tuxfamily.org/dox/MatrixBase_8h_source.html) 中：
+
+```cpp
+template<typename OtherDerived>
+Derived& operator=(const MatrixBase<OtherDerived>& other);
+```
+
+这里，`Derived`是`VectorXf`（因为`u`是一个`VectorXf`），而`OtherDerived`是`CwiseBinaryOp`。具体来说，如前面所述，`OtherDerived`是：
+
+```cpp
+CwiseBinaryOp<internal::scalar_sum_op<float>, VectorXf, VectorXf>
+```
+
+所以被调用的`operator=`的完整原型是：
+
+```cpp
+VectorXf& MatrixBase<VectorXf>::operator=(const MatrixBase<CwiseBinaryOp<internal::scalar_sum_op<float>, VectorXf, VectorXf> > & other);
+```
+
+该`operator=`字面意思是将两个 `VectorXf `的总和复制到另一个 `VectorXf `中。这个`operator=`的实现在文件 [src/Core/Assign.h](http://eigen.tuxfamily.org/dox/Assign_8h_source.html) 中：
+
+```cpp
+template<typename Derived>
+template<typename OtherDerived>
+inline Derived& MatrixBase<Derived>
+  ::operator=(const MatrixBase<OtherDerived>& other)
+{
+    return internal::assign_selector<Derived,OtherDerived>::run(derived(), other.derived());
+}
+```
+
+接下来，我们了解一下 `internal::assign_selector`，这是它的声明（所有内容仍然在同一个文件 src/Core/Assign.h 中）：
+
+```cpp
+template<typename Derived, typename OtherDerived,
+         bool EvalBeforeAssigning = int(OtherDerived::Flags) & EvalBeforeAssigningBit,
+         bool NeedToTranspose = Derived::IsVectorAtCompileTime
+            && OtherDerived::IsVectorAtCompileTime
+            && int(Derived::RowsAtCompileTime) == int(OtherDerived::ColsAtCompileTime)
+            && int(Derived::ColsAtCompileTime) == int(OtherDerived::RowsAtCompileTime)
+            && int(Derived::SizeAtCompileTime) != 1>
+struct internal::assign_selector;
+```
+
+`internal::assign_selector`有4个模板参数，但是后面的两个由前面的两个自动确定。
+
+`EvalBeforeAssigning`用于强制执行`EvalBeforeAssigningBit`。某些表达式具有此标志，使它们在将其分配给另一个表达式之前自动计算为临时值。这是`Product`表达式的情况，为了避免在执行`m = m * m;`时出现奇怪的混叠现象。`CwiseBinaryOp`表达式在这里没有`EvalBeforeAssigningBit`：从一开始就说过不想在这里引入一个临时值。在 [src/Core/CwiseBinaryOp.h](http://eigen.tuxfamily.org/dox/CwiseBinaryOp_8h_source.html) 中，`internal::traits<CwiseBinaryOp>` 中的`Flags`不包括`EvalBeforeAssigningBit`。然后，通过`EIGEN_GENERIC_PUBLIC_INTERFACE`宏，`CwiseBinaryOp`的`Flags`成员从`internal::traits`导入，在这里模板参数`EvalBeforeAssigning`的值为`false`。
+
+`NeedToTranspose`是为了用户想要将行向量复制到列向量的情况而设定的特殊例外。我们允许这种情况违反一般规则，即在分配中需要维度匹配。在这里左侧和右侧都是列向量，即`ColsAtCompileTime`等于1。因此，`NeedToTranspose`也是`false`。
+
+因此，在部分特化中：
+
+```cpp
+internal::assign_selector<Derived, OtherDerived, false, false>
+```
+
+它的定义如下：
+
+```cpp
+template<typename Derived, typename OtherDerived>
+struct internal::assign_selector<Derived,OtherDerived,false,false> 
+{
+    static Derived& run(Derived& dst, const OtherDerived& other) 
+    { return dst.lazyAssign(other.derived()); }
+};
+```
+
+
+
+接下来，我们了解一下 `lazyAssign` 是如何工作的：
+
+```cpp
+template<typename Derived>
+template<typename OtherDerived>
+inline Derived& MatrixBase<Derived>
+  ::lazyAssign(const MatrixBase<OtherDerived>& other)
+{
+    EIGEN_STATIC_ASSERT_SAME_MATRIX_SIZE(Derived,OtherDerived)
+    eigen_assert(rows() == other.rows() && cols() == other.cols());
+    internal::assign_impl<Derived, OtherDerived>::run(derived(),other.derived());
+    return derived();
+}
+```
+
+其中，
+
+```cpp
+internal::assign_impl<Derived, OtherDerived>::run(derived(),other.derived());
+```
+
+`internal::assign_impl`内部是怎么实现的？他的定义如下：
+
+```cpp
+template<typename Derived1, typename Derived2,
+     int Vectorization = internal::assign_traits<Derived1, Derived2>::Vectorization,
+     int Unrolling = internal::assign_traits<Derived1, Derived2>::Unrolling>
+struct internal::assign_impl;
+```
+
+同样，`internal::assign_selector`接受4个模板参数，但是后面的2个参数由前面的2个参数自动确定。
+
+这两个参数`Vectorization`和`Unrolling`由一个辅助类`internal::assign_traits`确定。它的作用是确定要使用的向量化策略（即`Vectorization`）和展开策略（即`Unrolling`）。
+
+这里不会深入介绍如何选择这些策略（这在同一文件顶部的`internal::assign_traits`实现中）。只介绍这里`Vectorization`的值为`LinearVectorization`，而`Unrolling`的值为`NoUnrolling`（由于向量具有动态大小，因此没有办法在编译时展开循环，这一点是显而易见的）。
+
+所以 `internal::assign_impl` 的部分特化是：
+
+```cpp
+internal::assign_impl<Derived1, Derived2, LinearVectorization, NoUnrolling>
+```
+
+他的定义如下：
+
+```cpp
+template<typename Derived1, typename Derived2>
+struct internal::assign_impl<Derived1, Derived2, LinearVectorization, NoUnrolling>
+{
+  static void run(Derived1 &dst, const Derived2 &src)
+  {
+    const int size = dst.size();
+    const int packetSize = internal::packet_traits<typename Derived1::Scalar>::size;
+    const int alignedStart = internal::assign_traits<Derived1,Derived2>::DstIsAligned ? 0
+                           : internal::first_aligned(&dst.coeffRef(0), size);
+    const int alignedEnd = alignedStart + ((size-alignedStart)/packetSize)*packetSize;
+ 
+    for(int index = 0; index < alignedStart; index++)
+      dst.copyCoeff(index, src);
+ 
+    for(int index = alignedStart; index < alignedEnd; index += packetSize)
+    {
+      dst.template copyPacket<Derived2, Aligned, internal::assign_traits<Derived1,Derived2>::SrcAlignment>(index, src);
+    }
+ 
+    for(int index = alignedEnd; index < size; index++)
+      dst.copyCoeff(index, src);
+  }
+};
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
