@@ -8339,51 +8339,154 @@ struct internal::assign_impl<Derived1, Derived2, LinearVectorization, NoUnrollin
 };
 ```
 
+线性向量化意味着左侧和右侧表达式可以被线性访问，也就是你可以通过一个整数索引引用它们的系数，而不是必须通过两个整数行、列引用它们的系数。
 
+正如我们在开始时所说，向量化是使用4个浮点数块工作的。在这里，`PacketSize` 为 4。
 
+我们需要解决两个潜在的问题：
 
+- 首先，如果数据包是128位对齐的，向量化效果会更好。这对于写访问尤其重要。因此，在写入`dst`的系数时，我们希望通过4个数据包分组这些系数，以便每个数据包都是128位对齐的。一般来说，这需要跳过`dst`的前几个系数。这就是`alignedStart`的作用。然后，我们逐个复制这些前几个系数，而不是通过数据包。在我们的情况下，`dst`表达式是`VectorXf`，记住我们在向量的构造中分配了对齐的数组。Eigen的`DstIsAligned`已经处理了这一切，无需进行任何运行时检查，因此`alignedStart`为零。
 
+- 其次，要复制的系数数量通常不是`packetSize`的整数倍。在这里，要复制的系数有`50`个，`packetSize`是`4`。因此，我们将不得不逐个复制最后`2`个系数，而不是通过数据包。在这里，`alignedEnd`为`48`。
 
+接下来是实际的循环。
 
+首先是向量化的部分：前50个系数中的前48个将通过4个数据包逐个复制：
 
+```cpp
+for(int index = alignedStart; index < alignedEnd; index += packetSize)
+{
+    dst.template copyPacket<Derived2, Aligned, internal::assign_traits<Derived1,Derived2>::SrcAlignment>(index, src);
+}
+```
 
+什么是 `copyPacket`? 它在 `src/Core/Coeffs.h` 中定义，如下：
 
+```cpp
+template<typename Derived>
+template<typename OtherDerived, int StoreMode, int LoadMode>
+inline void MatrixBase<Derived>::copyPacket(int index, const MatrixBase<OtherDerived>& other)
+{
+    eigen_internal_assert(index >= 0 && index < size());
+    derived().template writePacket<StoreMode>(index, other.derived().template packet<LoadMode>(index));
+}
+```
 
+ `writePacket()` 和 `packet()` 是什么。
 
+首先，这里的`writePacket()`是左侧`VectorXf`的一个方法。他的定义在 `src/Core/Matrix.h` 中：
 
+```cpp
+template<int StoreMode>
+inline void writePacket(int index, const PacketScalar& x)
+{
+    internal::pstoret<Scalar, PacketScalar, StoreMode>(m_storage.data() + index, x);
+}
+```
 
+在这里，`StoreMode`是`Aligned`，表示我们正在进行128位对齐的写访问，`PacketScalar`是一个表示 `4个浮点数的SSE数据包` 的类型，`internal::pstoret`是一个函数，将这样的数据包写入内存。它们的定义是特定于架构的，我们可以在`src/Core/arch/SSE/PacketMath.h`中找到它们：
 
+在`src/Core/arch/SSE/PacketMath.h`中决定`PacketScalar`类型的代码行（通过Matrix.h中的typedef）是：
 
+```cpp
+template<> struct internal::packet_traits<float>  
+{ typedef __m128  type; enum {size=4}; };
+```
 
+在这里，`__m128`是一个特定于`SSE`的类型。请注意，这里的`enum size`是用来定义上面的`packetSize`的。
 
+下面是`internal::pstoret`的实现：
 
+```cpp
+template<> inline void internal::pstore(float*  to, const __m128&  from) 
+{ _mm_store_ps(to, from); }
+```
 
+在这里，`__mm_store_ps`是一个特定于`SSE`的内部函数，表示单个`SSE`指令。`internal::pstore`和`internal::pstoret`之间的区别在于`internal::pstoret`是一个调度程序，处理对齐和未对齐的情况，你可以在`src/Core/GenericPacketMath.h`中找到其定义：
 
+```
+template<typename Scalar, typename Packet, int LoadMode>
+inline void internal::pstoret(Scalar* to, const Packet& from)
+{
+    if(LoadMode == Aligned)
+    	internal::pstore(to, from);
+    else
+    	internal::pstoreu(to, from);
+}
+```
 
+这解释了`writePacket()`的工作原理。现在让我们看看`packet()`调用：
 
+```cpp
+derived().template writePacket<StoreMode>(index, other.derived().template packet<LoadMode>(index));
+```
 
+在这里，`other`是总和表达式`v + w`。`.derived()`只是从`MatrixBase`转换为其子类，这里是`CwiseBinaryOp`。接下来查看 [src/Core/CwiseBinaryOp.h](http://eigen.tuxfamily.org/dox/CwiseBinaryOp_8h_source.html)：
 
+```cpp
+class Matrix
+{
+    // ...
+    template<int LoadMode>
+    inline PacketScalar packet(int index) const
+    {
+      return internal::ploadt<Scalar, LoadMode>(m_storage.data() + index);
+    }
+};
+```
 
+让我们来看一下[GenericPacketMath.h](http://eigen.tuxfamily.org/dox/GenericPacketMath_8h_source.html)中`internal::ploadt`和[src/Core/arch/SSE/PacketMath.h](http://eigen.tuxfamily.org/dox/SSE_2PacketMath_8h_source.html)中的`internal::pload`的定义。它们与`internal::pstore`非常相似。
 
+让我们回到`CwiseBinaryOp::packet()`。一旦来自向量`v`和`w`的数据包被返回，这个函数会做什么？它在这些数据包上调用`m_functor.packetOp()`。那么`m_functor`是什么？在这里，我们必须记住我们正在处理什么样的`CwiseBinaryOp`的特定模板特化：
 
+```cpp
+CwiseBinaryOp<internal::scalar_sum_op<float>, VectorXf, VectorXf>
+```
 
+`m_functor`是一个空类`internal::scalar_sum_op<float>`的对象。如上所述，不必担心为什么我们需要构造这个空类的对象——这是一个实现细节，重点是其他一些函数对象需要存储成员数据。
 
+`internal::scalar_sum_op`在 `src/Core/Functors.h` 中定义：
 
+```cpp
+template<typename Scalar> struct internal::scalar_sum_op EIGEN_EMPTY_STRUCT {
+    inline const Scalar operator() (const Scalar& a, const Scalar& b) const 
+    { return a + b; }
+    template<typename PacketScalar>
+    inline const PacketScalar packetOp(const PacketScalar& a, const PacketScalar& b) const
+    { return internal::padd(a,b); }
+};
+```
 
+正如你所看到的，`packetOp()`函数所做的就是调用`internal::padd`对这两个数据包进行求和。下面是[src/Core/arch/SSE/PacketMath.h](http://eigen.tuxfamily.org/dox/SSE_2PacketMath_8h_source.html)中`internal::padd`的定义：
 
+```cpp
+template<> inline __m128  internal::padd(const __m128&  a, const __m128&  b) 
+{ return _mm_add_ps(a,b); }
+```
 
+在这里，`_mm_add_ps`是一个`SSE`特有的内部函数，表示单个`SSE`指令。
 
+总结一下，如下循环：
 
+```cpp
+for(int index = alignedStart; index < alignedEnd; index += packetSize)
+{
+    dst.template copyPacket<Derived2, Aligned, internal::assign_traits<Derived1,Derived2>::SrcAlignment>(index, src);
+}
+```
 
+已经被编译成以下代码：对于 `index` 从0到11（= 48/4 - 1）的循环，使用两个`__mm_load_ps` SSE指令从向量`v`和向量`w`中读取第`i`个数据包（每个数据包包含`4`个浮点数），然后使用`__mm_add_ps`指令将它们相加，最后使用`__mm_store_ps`指令存储结果。
 
+剩下的第二个循环处理最后几个（这里是最后2个）系数：
 
+```cpp
+for(int index = alignedEnd; index < size; index++)
+	dst.copyCoeff(index, src);
+```
 
+它的工作方式与我们刚刚解释的方式类似，只是更简单，因为这里没有涉及`SSE`矢量化。`copyPacket()` 变成了`copyCoeff()`，`packet()`变成了`coeff()`，`writePacket()`变成了`coeffRef()`。如果你看到这里，你可能可以自己理解这部分。
 
-
-
-
-
-
+我们看到，在编译过程中，所有Eigen的C++抽象都消失了，我们确实可以精确控制所发出的汇编指令。这就是C++的美妙之处！由于我们对发出的汇编指令有如此精确的控制，但选择正确指令的逻辑如此复杂，因此我们可以说Eigen确实像一个优化编译器。如果你愿意，你也可以说Eigen的行为像一个编译器的脚本。从某种意义上说，C++模板元编程是编写编译器脚本的过程 - 已经证明这种脚本语言是图灵完备的。详情请参见[维基百科](http://en.wikipedia.org/wiki/Template_metaprogramming)。
 
 
 
