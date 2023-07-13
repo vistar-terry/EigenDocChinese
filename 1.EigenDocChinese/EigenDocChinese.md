@@ -8492,6 +8492,132 @@ for(int index = alignedEnd; index < size; index++)
 
 ### 8.10.2 类层次结构
 
+[英文原文(The class hierarchy)](http://eigen.tuxfamily.org/dox/TopicClassHierarchy.html)
+
+本页面介绍了Eigen类层次结构中 `Core` 类的设计及其相互关系。一般用户可能不需要关注这些细节，但对于高级用户和Eigen开发人员可能会有用。
+
+
+
+#### 原则
+
+Eigen的类层次结构的设计是为了避免虚函数的开销会严重影响性能。相反，Eigen使用奇怪递归模板模式（Curiously Recurring Template Pattern，CRTP）实现多态性。在这个模式中，基类（比如`MatrixBase`）本质上是一个模板类，派生类（比如`Matrix`）继承了基类，派生类本身作为模板参数（在这种情况下，`Matrix`从`MatrixBase<Matrix>`继承）。这样，Eigen可以在编译时解析多态函数调用。
+
+此外，该设计避免了多继承。其中一个原因是，根据我们的经验，一些编译器（如`MSVC`）无法执行空基类优化，而这对于我们的固定大小类型至关重要。
+
+
+
+####  Core 类
+
+如果你想编写接受或返回Eigen对象的函数，那么你需要了解以下类：
+
+- **Matrix**：是指密集的平面矩阵。如果`m`是一个矩阵，那么例如`m+m`不再是一个矩阵，它是一个“矩阵表达式”。
+- **MatrixBase**：指的是密集矩阵表达式。这意味着`MatrixBase`是可以进行加法、矩阵乘法、LU分解、QR分解等操作的。所有的矩阵表达式类，包括`Matrix`本身，都继承自`MatrixBase`。
+- **Array**：指的是普通的密集数组。如果`x`是一个`Array`，那么例如`x+x`就不再是一个`Array`，而是一个"数组表达式"。
+- **ArrayBase**：指的是密集数组表达式。这意味着`ArrayBase`是可以相加、数组乘法以及执行各种数组操作的表达式。所有的数组表达式类，包括`Array`本身，在继承时都会继承`ArrayBase`。
+- **DenseBase**：指的是密集（矩阵或数组）表达式。`ArrayBase`和`MatrixBase`都继承自`DenseBase`。`DenseBase`是所有方法的集合，这些方法适用于密集表达式，无论是矩阵还是数组表达式。例如，`block(...)`方法就属于`DenseBase`。
+
+
+
+#### 基类
+
+这些类是上述五个核心(Core)类的基类。它们更多是内部使用，对于使用Eigen库的用户来说不太常见。
+
+- **PlainObjectBase**：表示密集（矩阵或数组）的普通对象，即存储其自己的密集系数数组的对象。例如，`resize()`方法就在这里。`PlainObjectBase`被`Matrix`和`Array`继承。但是，上面我们说`Matrix`继承了`MatrixBase`，`Array`继承了`ArrayBase`。那么这是否意味着多重继承？不是的，因为`PlainObjectBase`本身会根据我们是处于矩阵还是数组情形而继承`MatrixBase`或`ArrayBase`。当我们说`Matrix`通过`PlainObjectBase`间接继承`MatrixBase`时，我们省略了这一点。`Array`也是同理。
+
+- **DenseCoeffsBase**：表示具有密集系数访问器的对象。它是`DenseBase`的一个基类。`DenseCoeffsBase`存在的原因是，可用系数访问器的集合取决于密集表达式是否具有直接访问内存的能力（`DirectAccessBit`标志）。例如，如果`x`是一个普通矩阵，则`x`具有直接访问，`x.transpose()`和`x.block(...)`也具有直接访问，因为它们的系数可以直接从内存中读取，但是`x+x`没有直接内存访问，因为获取它的任何系数都需要计算（加法），不能直接从内存中读取。
+
+- **EigenBase**：表示任何可以计算为普通密集矩阵或数组的东西（即使这可能不是一个好主意）。`EigenBase`实际上是任何类似于矩阵或数组的东西的绝对基类。它是`DenseCoeffsBase`的一个基类，因此它位于我们所有密集类的层次结构之下，但它并不限于密集表达式。例如，`EigenBase`也被对角矩阵、稀疏矩阵等继承。
+
+    
+
+#### 继承图
+
+`Matrix` 的继承图如下所示：
+
+```
+EigenBase<Matrix>
+  <-- DenseCoeffsBase<Matrix>    (direct access case)
+    <-- DenseBase<Matrix>
+      <-- MatrixBase<Matrix>
+        <-- PlainObjectBase<Matrix>    (matrix case)
+          <-- Matrix
+```
+
+`Array` 的继承图如下所示：
+
+```
+EigenBase<Array>
+  <-- DenseCoeffsBase<Array>    (direct access case)
+    <-- DenseBase<Array>
+      <-- ArrayBase<Array>
+        <-- PlainObjectBase<Array>    (array case)
+          <-- Array
+```
+
+另一个矩阵表达式类的继承图如下，此处用`SomeMatrixXpr`表示：
+
+```
+EigenBase<SomeMatrixXpr>
+  <-- DenseCoeffsBase<SomeMatrixXpr>    (direct access or no direct access case)
+    <-- DenseBase<SomeMatrixXpr>
+      <-- MatrixBase<SomeMatrixXpr>
+        <-- SomeMatrixXpr
+```
+
+另一个数组表达式类的继承图如下，此处用`SomeMatrixXpr`表示：
+
+```
+EigenBase<SomeArrayXpr>
+  <-- DenseCoeffsBase<SomeArrayXpr>    (direct access or no direct access case)
+    <-- DenseBase<SomeArrayXpr>
+      <-- ArrayBase<SomeArrayXpr>
+        <-- SomeArrayXpr
+```
+
+最后，一个不是密集表达式的示例，例如对角矩阵。相应的继承图如下：
+
+```
+EigenBase<DiagonalMatrix>
+  <-- DiagonalBase<DiagonalMatrix>
+    <-- DiagonalMatrix
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### 8.10.3 惰性求值与混叠(Aliasing)
 
 ## 8.11 在 CMake 项目中使用 Eigen
