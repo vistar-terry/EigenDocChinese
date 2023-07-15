@@ -8584,43 +8584,213 @@ EigenBase<DiagonalMatrix>
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### 8.10.3 惰性求值与混叠(Aliasing)
 
+[英文原文(Lazy Evaluation and Aliasing)](http://eigen.tuxfamily.org/dox/TopicLazyEvaluation.html)
+
+执行摘要：Eigen具有智能的编译时机制，可以实现惰性求值并在适当的情况下删除临时变量。它会自动处理大多数情况下的混叠问题，例如矩阵乘积。自动行为可以通过使用`MatrixBase::eval()`和`MatrixBase::noalias()`方法手动覆盖。
+
+当你编写涉及复杂表达式的代码时，例如：
+
+```cpp
+mat1 = mat2 + mat3 * (mat4 + mat5);
+```
+
+Eigen会自动为每个子表达式确定是否将其计算为临时变量。确实，在某些情况下，将子表达式计算为临时变量更好，而在其他情况下则最好避免这样做。
+
+没有表达式模板的传统数学库总是将所有子表达式计算为临时变量。因此，在以下代码中，
+
+```cpp
+vec1 = vec2 + vec3;
+```
+
+传统的库会将`vec2 + vec3`计算为一个临时变量`vec4`，然后将`vec4`复制到`vec1`中。这显然是低效的：数组被遍历两次，有很多无用的加载/存储操作。
+
+基于表达式模板的库可以避免将子表达式计算为临时变量，这在许多情况下会使速度显著提高。这被称为延迟/惰性求值，因为表达式会尽可能晚地进行求值。在Eigen中，所有表达式都是延迟求值的。更准确地说，一旦表达式分配给矩阵，它便开始被求值。在此之前，除了构建抽象表达式树外，什么也不会发生。然而，与大多数其他基于表达式模板的库不同，Eigen可能会选择将某些子表达式计算为临时变量。这有两个原因：首先，纯延迟求值并不总是性能的最佳选择；其次，纯延迟求值可能会非常危险，例如矩阵乘法：如果将`mat = mat * mat`直接在目标矩阵中求值矩阵乘积，则会得到错误的结果，因为矩阵乘积的方式不同。
+
+出于这些原因，Eigen具有智能的编译时机制，可以自动确定哪些子表达式应计算为临时变量。如下示例中：
+
+```cpp
+mat1 = mat2 + mat3;
+```
+
+Eigen选择不引入任何临时变量。因此，数组只被遍历一次，产生了优化的代码。如果你真的想强制立即求值，可以使用`eval()`函数，如下：
+
+```cpp
+mat1 = (mat2 + mat3).eval();
+```
+
+如下是一个更复杂的示例：
+
+```cpp
+mat1 = -mat2 + mat3 + 5 * mat4;
+```
+
+在这个例子中，Eigen也不会引入任何临时变量，从而产生一个单一的融合计算循环，这显然是正确的选择。
+
+
+
+#### 哪些子表达式将被计算为临时变量？
+
+默认的计算策略是将操作融合到一个循环中，除了少数情况下，Eigen默认选择该策略。
+
+##### 第一种情况
+
+Eigen选择计算子表达式的第一种情况是当它看到一个赋值操作`a = b;`，且表达式`b`带有 `在赋值之前计算` 的标志，最重要的这样的表达式是矩阵乘积表达式。例如，当执行以下操作时：
+
+```cpp
+mat = mat * mat;
+```
+
+Eigen会将`mat * mat`计算成一个临时矩阵，然后将其复制到原始的`mat`中。这可以保证正确的结果，因为我们之前看到，惰性计算在矩阵乘积中会产生错误的结果。这也不会花费太多的计算代价，因为矩阵乘积本身的代价要高得多。请注意，这个临时矩阵仅在计算时引入，也就是在此示例中的`=`中。表达式`mat * mat`仍然返回一个抽象的乘积类型。
+
+如果你明确计算结果不会与乘积的操作发生混叠现象，并想强制使用惰性计算，则可以使用`.noalias()`。下面是一个例子：
+
+```cpp
+mat1.noalias() = mat2 * mat2;
+```
+
+在这里，由于我们知道`mat2`不是与`mat1`相同的矩阵，因此我们知道惰性求值不会有危险，可以强制使用惰性求值。具体来说，`noalias()`的作用是绕过`evaluate-before-assigning`标志。
+
+##### 第二种情况
+
+Eigen选择评估子表达式的第二种情况是当它看到嵌套表达式，例如`a + b`时，其中`b`已经是一个具有`evaluate-before-nesting`标志的表达式。同样，这类表达式中最重要的例子是矩阵乘积表达式。例如，当执行以下操作时：
+
+```cpp
+mat1 = mat2 * mat3 + mat4 * mat5;
+```
+
+在这个例子中，矩阵乘积`mat2 * mat3`和`mat4 * mat5`会被分别求值为临时矩阵，然后在`mat1`中进行求和。实际上，为了有效地计算矩阵乘积，需要在手头有一个目标矩阵内进行求值，而不是像简单的 `点积` 那样。然而，对于小矩阵，你可能希望使用`lazyProduct()`来强制执行基于 `点积` 的惰性求值。再次强调，重要的是要理解，这些临时矩阵仅在计算时创建，即在`operator=`中。请参见`TopicPitfalls_auto_keyword`了解与此说明相关的常见陷阱。
+
+##### 第三种情况
+
+第三种情况是，当Eigen的成本模型显示，如果将子表达式求值为临时变量，操作的总成本将会减少时，Eigen会选择求值该子表达式。实际上，在某些情况下，如果一个中间结果的计算成本足够高，而且被重复使用的次数足够多，则该中间结果值得被 “缓存”。以下是一个例子：
+
+```cpp
+mat1 = mat2 * (mat3 + mat4);
+```
+
+在这里，假设矩阵至少有2行2列，表达式`mat3 + mat4`的每个系数在矩阵乘积中会被使用多次。与每次计算总和相比，一次计算并将其存储在一个临时变量中要好得多。Eigen理解这一点，并在求值乘积之前将`mat3 + mat4`求值为一个临时变量。
+
+
+
 ## 8.11 在 CMake 项目中使用 Eigen
+
+[英文原文(Using Eigen in CMake Projects)](http://eigen.tuxfamily.org/dox/TopicCMakeGuide.html)
+
+Eigen提供了CMake支持，使得该库可以轻松地在CMake项目中使用。
+
+> 注意：启用这个功能需要CMake 3.0（或更高版本）。
+
+Eigen提供了一个CMake示例，名为`Eigen3::Eigen`，可以使用`find_package CMake`命令导入，并通过调用`target_link_libraries`来使用，如下示例：
+
+```cmake
+cmake_minimum_required (VERSION 3.0)
+project (myproject)
+ 
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+ 
+add_executable (example example.cpp)
+target_link_libraries (example Eigen3::Eigen)
+```
+
+上述代码片段必须放置在名为`CMakeLists.txt`的文件中，与`example.cpp`放在一起。运行如下命令：
+
+```bash
+$ cmake path-to-example-directory
+```
+
+CMake将生成项目文件，生成一个名为`example`的可执行文件，它需要至少版本`3.3`的Eigen。在此处，`path-to-example-directory`是包含`CMakeLists.txt`和`example.cpp`的目录的路径。
+
+如果Eigen未安装在默认位置，或者你想选择特定版本，请不要忘记设置`CMAKE_PREFIX_PATH`变量。例如：
+
+```bash
+$ cmake path-to-example-directory -DCMAKE_PREFIX_PATH=$HOME/mypackages
+```
+
+另一种方法是将`Eigen3_DIR cmake`的变量设置为包含`Eigen3*.cmake`文件的相应路径。例如：
+
+```bash
+$ cmake path-to-example-directory -DEigen3_DIR=$HOME/mypackages/share/eigen3/cmake/
+```
+
+如果在使用`find_package`查找Eigen时省略了`REQUIRED`选项，则可以按以下方式检查是否找到了该软件包：
+
+```cmake
+find_package (Eigen3 3.3 NO_MODULE)
+ 
+if (TARGET Eigen3::Eigen)
+  # Use the imported target
+endif (TARGET Eigen3::Eigen)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
