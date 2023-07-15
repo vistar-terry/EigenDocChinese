@@ -33,7 +33,7 @@ int main(int argc, char **argv)
     Eigen::VectorXd x = chol.solve(b);        // use the factorization to solve for the given right hand side
 
     // Export the result to a file:
-    saveAsBitmap(x, n, argv[1]);
+    saveAsBitmap(x, n, strcat(argv[1], ".jpeg"));
 
     return 0;
 }

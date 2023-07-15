@@ -15,3 +15,5 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 add_executable(1.First_example 1.First-example.cpp)
 target_link_libraries(1.First_example PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+
+add_executable(2.SparseMatrix 2.SparseMatrix.cpp)
