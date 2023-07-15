@@ -5042,6 +5042,7 @@ OuterStarts:	0	2	4	5	6	8
 示例代码如下：
 
 ```cpp
+// 代码索引 5-1-1-1
 #include <Eigen/Sparse>
 #include <vector>
 #include <iostream>
@@ -5139,6 +5140,7 @@ vec.nonZeros()
 稀疏对象的元素可以通过`coeffRef(i, j)`函数进行随机访问。然而，这个函数涉及到一个相当消耗资源的二分搜索。在大多数情况下，我们只想迭代非零元素。这可以通过标准循环遍历外部维度来实现，然后使用`InnerIterator` 迭代内部向量的非零元素。因此，非零系数必须按照存储顺序进行访问。以下是一个示例：
 
 ```cpp
+// 代码索引 5-1-2-2
 SparseMatrix<double> mat(rows,cols);
 for (int k=0; k<mat.outerSize(); ++k)
 {
@@ -5151,6 +5153,7 @@ for (int k=0; k<mat.outerSize(); ++k)
     }
 }
 
+// 代码索引 5-1-2-2
 SparseVector<double> vec(size);
 for (SparseVector<double>::InnerIterator it(vec); it; ++it)
 {
@@ -5172,6 +5175,7 @@ for (SparseVector<double>::InnerIterator it(vec); it; ++it)
 这是一个典型的用法示例：
 
 ```cpp
+// 代码索引 5-1-2-1 (这里是伪代码，可运行代码通过索引见例程)
 typedef Eigen::Triplet<double> T;
 std::vector<T> tripletList;
 tripletList.reserve(estimation_of_entries);
@@ -5190,6 +5194,7 @@ mat.setFromTriplets(tripletList.begin(), tripletList.end());
 然而，在某些情况下，可以通过直接将非零元素插入目标矩阵来实现稍高的性能和较低的内存消耗。这种方法的典型场景如下所示：
 
 ```cpp
+// 代码索引 5-1-2-1 (这里是伪代码，可运行代码通过索引见例程)
 SparseMatrix<double> mat(rows,cols);       // default is column major
 mat.reserve(VectorXi::Constant(cols,6));
 for each i,j such that v_ij != 0
