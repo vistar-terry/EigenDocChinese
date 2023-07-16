@@ -5221,6 +5221,7 @@ mat.makeCompressed();                      // optional
 稀疏表达式支持大多数一元和二元系数运算：
 
 ```cpp
+// 代码索引 5-1-2-3
 sm1.real()   sm1.imag()   -sm1                    0.5*sm1
 sm1+sm2      sm1-sm2      sm1.cwiseProduct(sm2)
 ```
@@ -5228,6 +5229,7 @@ sm1+sm2      sm1-sm2      sm1.cwiseProduct(sm2)
 然而，一个强制性的限制是存储顺序必须匹配。例如，在下面的例子中：
 
 ```cpp
+// 代码索引 5-1-2-3
 sm4 = sm1 + sm2 + sm3;
 ```
 
@@ -5241,6 +5243,7 @@ B = SparseMatrix<double>(A.transpose()) + A;
 二项式系数的操作符也可以混合稀疏和稠密表达式：
 
 ```cpp
+// 代码索引 5-1-2-3
 m2 = sm1.cwiseProduct(dm1);
 dm2 = sm1 + dm1;
 dm2 = dm1 - sm1;
@@ -5258,6 +5261,7 @@ dm2 += sm1;
 稀疏表达式也支持转置：
 
 ```cpp
+// 代码索引 5-1-2-3
 sm1 = sm2.transpose();
 sm1 = sm2.adjoint();
 ```
@@ -5271,16 +5275,18 @@ Eigen支持多种不同类型的稀疏矩阵乘积，如下所述：
 - **稀疏和稠密矩阵相乘**
 
 ```cpp
+// 代码索引 5-1-2-3
 dv2 = sm1 * dv1;
 dm2 = dm1 * sm1.adjoint();
 dm2 = 2. * sm1 * dm1;
 ```
 
-- **对称的稀疏和稠密矩阵相乘**
+- **对称的稀疏和稠密矩阵相乘** 
 
 ​		使用selfadjointView()指定对称性，可以优化稀疏对称矩阵与密集矩阵（或向量）的乘积。
 
 ```cpp
+// 代码索引 5-1-2-3
 dm2 = sm1.selfadjointView<>() * dm1;        // if all coefficients of sm1 are stored
 dm2 = sm1.selfadjointView<Upper>() * dm1;   // if only the upper part of sm1 is stored
 dm2 = sm1.selfadjointView<Lower>() * dm1;   // if only the lower part of sm1 is stored
@@ -5291,6 +5297,7 @@ dm2 = sm1.selfadjointView<Lower>() * dm1;   // if only the lower part of sm1 is 
 ​		对于稀疏矩阵的乘积，有两种不同的算法可用。默认算法是保守的，并保留可能出现的显式零值。
 
 ```cpp
+// 代码索引 5-1-2-3
 sm3 = sm1 * sm2;
 sm3 = 4 * sm1.adjoint() * sm2;
 ```
@@ -5298,6 +5305,7 @@ sm3 = 4 * sm1.adjoint() * sm2;
 ​		第二种算法可以即时裁剪显式零值或小于给定阈值的值。它通过 prune() 函数启用和控制。
 
 ```cpp
+// 代码索引 5-1-2-3
 sm3 = (sm1 * sm2).pruned();              // removes numerical zeros
 sm3 = (sm1 * sm2).pruned(ref);           // removes elements much smaller than ref
 sm3 = (sm1 * sm2).pruned(ref,epsilon);   // removes elements smaller than ref*epsilon
@@ -5308,8 +5316,9 @@ sm3 = (sm1 * sm2).pruned(ref,epsilon);   // removes elements smaller than ref*ep
 ​		最后，排列操作也可以应用于稀疏矩阵。
 
 ```cpp
-PermutationMatrix<Dynamic,Dynamic> P = ...;
-sm2 = P * sm1;
+// 代码索引 5-1-2-3
+PermutationMatrix<Dynamic,Dynamic> P = ...;  // 构建置换矩阵
+sm2 = P * sm1; // 使用置换矩阵对sm1执行排列操作
 sm2 = sm1 * P.inverse();
 sm2 = sm1.transpose() * P;
 ```
@@ -5321,6 +5330,7 @@ sm2 = sm1.transpose() * P;
 关于读取访问权限，稀疏矩阵与密集矩阵相同，公开了用于访问子矩阵（如块、列和行）的API。有关详细介绍，请参见[块操作](http://eigen.tuxfamily.org/dox/group__TutorialBlockOperations.html)。但是，出于性能考虑，向子稀疏矩阵的写入要受到更多限制，目前仅限于连续的列（或行）集，这些列（或行）是列主（或行主）稀疏矩阵可写的。此外，这些信息必须在编译时知道，不能使用诸如`block(...)`和`corner*(...)`之类的方法。下面总结了向`SparseMatrix`写入访问权限的可用API：
 
 ```cpp
+// 代码索引 5-1-2-3
 SparseMatrix<double,ColMajor> sm1;
 sm1.col(j) = ...;
 sm1.leftCols(ncols) = ...;
@@ -5343,6 +5353,7 @@ sm2.bottomRows(nrows) = ...;
 与密集矩阵一样，`triangularView()`函数可用于处理矩阵的三角部分，并对具有密集右侧的矩阵进行三角求解：
 
 ```cpp
+// 代码索引 5-1-2-3
 dm2 = sm1.triangularView<Lower>(dm1);
 dv2 = sm1.transpose().triangularView<Upper>(dv1);
 ```
@@ -5352,6 +5363,7 @@ dv2 = sm1.transpose().triangularView<Upper>(dv1);
 - 优化稀疏-稠密矩阵乘积
 
 ```cpp
+// 代码索引 5-1-2-3
 dm2 = sm1.selfadjointView<>() * dm1;        // if all coefficients of sm1 are stored
 dm2 = sm1.selfadjointView<Upper>() * dm1;   // if only the upper part of sm1 is stored
 dm2 = sm1.selfadjointView<Lower>() * dm1;   // if only the lower part of sm1 is stored
@@ -5360,6 +5372,7 @@ dm2 = sm1.selfadjointView<Lower>() * dm1;   // if only the lower part of sm1 is 
 - 复制三角形部分
 
 ```cpp
+// 代码索引 5-1-2-3
 // makes a full selfadjoint matrix from the upper triangular part
 sm2 = sm1.selfadjointView<Upper>();  
 // copies the upper triangular part to the lower triangular part
@@ -5369,6 +5382,7 @@ sm2.selfadjointView<Lower>() = sm1.selfadjointView<Upper>();
 - 对称排列的应用
 
 ```cpp
+// 代码索引 5-1-2-3
 PermutationMatrix<Dynamic,Dynamic> P = ...;
 // compute P S P' from the upper triangular part of A, and make it a full matrix
 sm2 = A.selfadjointView<Upper>().twistedBy(P);     
