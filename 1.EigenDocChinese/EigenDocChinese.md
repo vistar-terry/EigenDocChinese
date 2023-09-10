@@ -6030,7 +6030,8 @@ AngleAxis<float> aa(angle_in_radian, Vector3f(ax,ay,az));
 #### 使用四元数进行 3D 旋转
 
 ```cpp
-Quaternion<float> q;  q = AngleAxis<float>(angle_in_radian, axis);
+Quaternion<float> q;
+q = AngleAxis<float>(angle_in_radian, axis);
 ```
 
 
