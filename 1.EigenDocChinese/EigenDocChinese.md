@@ -8519,7 +8519,7 @@ for(int index = alignedEnd; index < size; index++)
 
 #### 原则
 
-Eigen的类层次结构的设计是为了避免虚函数的开销会严重影响性能。相反，Eigen使用奇怪递归模板模式（Curiously Recurring Template Pattern，CRTP）实现多态性。在这个模式中，基类（比如`MatrixBase`）本质上是一个模板类，派生类（比如`Matrix`）继承了基类，派生类本身作为模板参数（在这种情况下，`Matrix`从`MatrixBase<Matrix>`继承）。这样，Eigen可以在编译时解析多态函数调用。
+Eigen的类层次结构的设计是为了避免虚函数的开销会严重影响性能。相反，Eigen使用奇异递归模板模式（Curiously Recurring Template Pattern，CRTP）实现多态性。在这个模式中，基类（比如`MatrixBase`）本质上是一个模板类，派生类（比如`Matrix`）继承了基类，派生类本身作为模板参数（在这种情况下，`Matrix`从`MatrixBase<Matrix>`继承）。这样，Eigen可以在编译时解析多态函数调用。
 
 此外，该设计避免了多继承。其中一个原因是，根据我们的经验，一些编译器（如`MSVC`）无法执行空基类优化，而这对于我们的固定大小类型至关重要。
 
